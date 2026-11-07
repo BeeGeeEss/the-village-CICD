@@ -1,0 +1,19 @@
+services:
+  village-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: the-village-api
+
+    ports:
+      - "3000:3000"
+
+    env_file:
+      - .env
+
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+
+    restart: unless-stopped

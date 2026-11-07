@@ -1,0 +1,43 @@
+{
+  "name": "village-backend",
+  "version": "1.0.0",
+  "description": "Built with Node, Express, Mongoose and JWT",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "lint": "eslint .",
+    "setup:env": "node ./src/utils/_dev/envSetup.js",
+    "start": "node ./src/index.js",
+    "dev": "node --watch ./src/index.js",
+    "db:seed": "node ./src/utils/_dev/dbSeed.js",
+    "db:wipe": "node ./src/utils/_dev/dbWipe.js",
+    "db:reset": "npm run db:wipe && npm run db:seed"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/The-Village-Wellness-App/village-backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/The-Village-Wellness-App/village-backend/issues"
+  },
+  "homepage": "https://github.com/The-Village-Wellness-App/village-backend#readme",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.3.0",
+    "smallog": "^1.0.2"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.4",
+    "globals": "^17.6.0",
+    "jest": "^30.3.0",
+    "supertest": "^7.2.2"
+  }
+}
