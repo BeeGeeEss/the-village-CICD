@@ -21,6 +21,13 @@ app.use((request, response, next) => {
   next();
 });
 
+app.get("/health", (request, response) => {
+  response.status(200).json({
+    status: "healthy",
+    application: "The Village API",
+  });
+});
+
 app.get("/", (request, response) => {
   response.json({
     message: "Welcome to The Village API",
