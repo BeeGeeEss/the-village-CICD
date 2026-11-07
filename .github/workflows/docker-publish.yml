@@ -63,10 +63,10 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/beegeeess/the-village-container:latest
-            ghcr.io/beegeeess/the-village-container:development
-            ghcr.io/beegeeess/the-village-container:testing
-            ghcr.io/beegeeess/the-village-container:production
-            ghcr.io/beegeeess/the-village-container:${{ env.APP_VERSION }}
-            ghcr.io/beegeeess/the-village-container:production-${{ env.APP_VERSION }}
-            ghcr.io/beegeeess/the-village-container:sha-${{ env.SHORT_SHA }}
+            ghcr.io/beegeeess/the-village-CICD:latest
+            ghcr.io/beegeeess/the-village-CICD:development
+            ghcr.io/beegeeess/the-village-CICD:testing
+            ghcr.io/beegeeess/the-village-CICD:production
+            ghcr.io/beegeeess/the-village-CICD:${{ env.APP_VERSION }}
+            ghcr.io/beegeeess/the-village-CICD:production-${{ env.APP_VERSION }}
+            ghcr.io/beegeeess/the-village-CICD:sha-${{ env.SHORT_SHA }}
