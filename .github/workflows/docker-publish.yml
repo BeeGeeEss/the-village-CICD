@@ -1,4 +1,5 @@
-name: Build and Push Docker Image
+
+name: Build, Test, Publish and Deploy
 
 on:
   push:
@@ -6,14 +7,21 @@ on:
       - main
   workflow_dispatch:
 
-permissions:
-  contents: read
-  packages: write
-
 jobs:
   build_container:
     name: Test, Build and Publish Container
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # Only publish images from main.
+    if: github.ref == 'refs/heads/main'
+
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      short_sha: ${{ steps.meta.outputs.short_sha }}
 
     steps:
       - name: Checkout repository
@@ -41,11 +49,14 @@ jobs:
 
       - name: Get application version
         run: |
-          echo "APP_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+          echo "APP_VERSION=$(node -p "require('./package.json').version")" >> "$GITHUB_ENV"
 
       - name: Get short Git commit SHA
+        id: meta
         run: |
-          echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
+          SHORT_SHA="${GITHUB_SHA::7}"
+          echo "SHORT_SHA=$SHORT_SHA" >> "$GITHUB_ENV"
+          echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -70,3 +81,56 @@ jobs:
             ghcr.io/beegeeess/the-village-cicd:${{ env.APP_VERSION }}
             ghcr.io/beegeeess/the-village-cicd:production-${{ env.APP_VERSION }}
             ghcr.io/beegeeess/the-village-cicd:sha-${{ env.SHORT_SHA }}
+
+  deploy_staging:
+    name: Deploy to Google Cloud Run
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    needs: build_container
+
+    # Never deploy from a feature branch.
+    if: github.ref == 'refs/heads/main'
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy the-village-api-staging \
+            --project="${{ vars.GCP_PROJECT_ID }}" \
+            --image="ghcr.io/beegeeess/the-village-cicd:sha-${{ needs.build_container.outputs.short_sha }}" \
+            --region="${{ vars.GCP_REGION }}" \
+            --service-account="village-api-runtime@the-village-cicd.iam.gserviceaccount.com" \
+            --port=8080 \
+            --min=0 \
+            --max=3 \
+            --set-secrets="DATABASE_URL=DATABASE_URL:latest,JWT_SECRET_KEY=JWT_SECRET_KEY:latest" \
+            --allow-unauthenticated \
+            --quiet
+
+      - name: Verify deployment health
+        run: |
+          SERVICE_URL=$(gcloud run services describe the-village-api-staging \
+            --project="${{ vars.GCP_PROJECT_ID }}" \
+            --region="${{ vars.GCP_REGION }}" \
+            --format="value(status.url)")
+
+          echo "Testing: $SERVICE_URL/health"
+
+          curl --fail --show-error --silent \
+            "$SERVICE_URL/health"
