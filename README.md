@@ -41,7 +41,7 @@
 
 This repository contains an express.js/node.js backend API for a wellness app. The API includes full CRUD operations for mood, pain, events and users. The API connects to a data in MongoDB Atlas, and uses JWT authentication and roles to for authorisation. This application was created as part of an academic Web Development assessment using MongoDB, Express.js, React and Node.js (MERN Stack).
 
-This assessment has containerised the backend API using Docker. Using GitHub Actions, the Docker image has been built and published to the GitHub Container Registry (GHCR).
+This assessment has built on the previous project which containerised the backend API using Docker. Using GitHub Actions, the Docker image was been built and published to the GitHub Container Registry (GHCR). In this project the CI/CD component has been extended to include cloud based deployment.
 
 Visit the project [profile](https://github.com/The-Village-Wellness-App) for more information.
 
