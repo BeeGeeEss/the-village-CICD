@@ -13,7 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
-    # Only publish images from main.
     if: github.ref == 'refs/heads/main'
 
     permissions:
@@ -22,6 +21,8 @@ jobs:
 
     outputs:
       short_sha: ${{ steps.meta.outputs.short_sha }}
+      digest: ${{ steps.build.outputs.digest }}
+      app_version: ${{ steps.version.outputs.app_version }}
 
     steps:
       - name: Checkout repository
@@ -48,8 +49,11 @@ jobs:
         run: npm test
 
       - name: Get application version
+        id: version
         run: |
-          echo "APP_VERSION=$(node -p "require('./package.json').version")" >> "$GITHUB_ENV"
+          APP_VERSION=$(node -p "require('./package.json').version")
+          echo "APP_VERSION=$APP_VERSION" >> "$GITHUB_ENV"
+          echo "app_version=$APP_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Get short Git commit SHA
         id: meta
@@ -69,6 +73,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image
+        id: build
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -77,19 +82,16 @@ jobs:
             ghcr.io/beegeeess/the-village-cicd:latest
             ghcr.io/beegeeess/the-village-cicd:development
             ghcr.io/beegeeess/the-village-cicd:testing
-            ghcr.io/beegeeess/the-village-cicd:production
             ghcr.io/beegeeess/the-village-cicd:${{ env.APP_VERSION }}
-            ghcr.io/beegeeess/the-village-cicd:production-${{ env.APP_VERSION }}
             ghcr.io/beegeeess/the-village-cicd:sha-${{ env.SHORT_SHA }}
 
   deploy_staging:
-    name: Deploy to Google Cloud Run
+    name: Deploy to Google Cloud Run Staging
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
     needs: build_container
 
-    # Never deploy from a feature branch.
     if: github.ref == 'refs/heads/main'
 
     permissions:
@@ -113,7 +115,7 @@ jobs:
         run: |
           gcloud run deploy the-village-api-staging \
             --project="${{ vars.GCP_PROJECT_ID }}" \
-            --image="ghcr.io/beegeeess/the-village-cicd:sha-${{ needs.build_container.outputs.short_sha }}" \
+            --image="ghcr.io/beegeeess/the-village-cicd@${{ needs.build_container.outputs.digest }}" \
             --region="${{ vars.GCP_REGION }}" \
             --service-account="village-api-runtime@the-village-cicd.iam.gserviceaccount.com" \
             --port=8080 \
@@ -123,7 +125,7 @@ jobs:
             --allow-unauthenticated \
             --quiet
 
-      - name: Verify deployment health
+      - name: Verify staging health
         run: |
           SERVICE_URL=$(gcloud run services describe the-village-api-staging \
             --project="${{ vars.GCP_PROJECT_ID }}" \
@@ -134,3 +136,74 @@ jobs:
 
           curl --fail --show-error --silent \
             "$SERVICE_URL/health"
+
+  deploy_production:
+    name: Deploy to Google Cloud Run Production
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    needs:
+      - build_container
+      - deploy_staging
+
+    if: github.ref == 'refs/heads/main'
+
+    environment:
+      name: production
+
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+
+      - name: Deploy to Cloud Run Production
+        run: |
+          gcloud run deploy the-village-api-production \
+            --project="${{ vars.GCP_PROJECT_ID }}" \
+            --image="ghcr.io/beegeeess/the-village-cicd@${{ needs.build_container.outputs.digest }}" \
+            --region="${{ vars.GCP_REGION }}" \
+            --service-account="village-api-runtime@the-village-cicd.iam.gserviceaccount.com" \
+            --port=8080 \
+            --min=0 \
+            --max=3 \
+            --set-secrets="DATABASE_URL=DATABASE_URL:latest,JWT_SECRET_KEY=JWT_SECRET_KEY:latest" \
+            --no-allow-unauthenticated \
+            --quiet
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Promote approved image to production tags
+        env:
+          IMAGE_DIGEST: ${{ needs.build_container.outputs.digest }}
+          APP_VERSION: ${{ needs.build_container.outputs.app_version }}
+        run: |
+          IMAGE="ghcr.io/beegeeess/the-village-cicd@${IMAGE_DIGEST}"
+
+          docker buildx imagetools create \
+            --tag ghcr.io/beegeeess/the-village-cicd:production \
+            "$IMAGE"
+
+          docker buildx imagetools create \
+            --tag "ghcr.io/beegeeess/the-village-cicd:production-${APP_VERSION}" \
+            "$IMAGE"
