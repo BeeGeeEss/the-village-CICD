@@ -12,7 +12,7 @@ app.use(helmet());
 // We want to customise the origins to allow only our relevant frontends to reach the API
 let handyCorsConfig = {
   credentials: true,
-  origin: ["https://the-village-wellness-app.netlify.app/", "http://localhost:5173"],
+  origin: ["https://the-village-wellness-app.netlify.app", "http://localhost:5173"],
 };
 app.use(cors(handyCorsConfig));
 
