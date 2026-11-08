@@ -35,8 +35,10 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await MoodModel.deleteMany({});
-  await UserModel.deleteMany({});
+  if (testUser?._id) {
+    await MoodModel.deleteMany({ user: testUser._id });
+    await UserModel.deleteOne({ _id: testUser._id });
+  }
 });
 
 describe("Mood Router", () => {

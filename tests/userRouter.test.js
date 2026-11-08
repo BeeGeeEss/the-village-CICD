@@ -27,7 +27,15 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await UserModel.deleteMany({});
+  await UserModel.deleteMany({
+    email: {
+      $in: [
+        "user@example.com",
+        "newuser@example.com",
+        "other@example.com",
+      ],
+    },
+  });
 });
 
 describe("User Router", () => {

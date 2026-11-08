@@ -36,8 +36,10 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await PainModel.deleteMany({});
-  await UserModel.deleteMany({});
+  if (testUser?._id) {
+    await PainModel.deleteMany({ user: testUser._id });
+    await UserModel.deleteOne({ _id: testUser._id });
+  }
 });
 
 describe("Pain Router", () => {
