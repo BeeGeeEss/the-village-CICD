@@ -126,7 +126,7 @@ eventRouter.patch("/:eventId", checkForUserJwt, checkEventOwnership, async (requ
     const updatedEvent = await EventModel.findByIdAndUpdate(
       request.params.eventId,
       updateData,
-      { new: true, runValidators: true }
+      { returnDocument: "after", runValidators: true },
     );
 
     response.json({ event: updatedEvent });
