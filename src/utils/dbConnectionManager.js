@@ -1,6 +1,5 @@
-const log = require("smallog");
 
-// Connecting and disconnecting from the database
+const log = require("smallog");
 const mongoose = require("mongoose");
 const { loadEnvFile } = require("node:process");
 
@@ -8,38 +7,40 @@ try {
   loadEnvFile();
 } catch (error) {
   log("No .env file detected!");
-  if (process.env.NODE_ENV == "production") {
-    log("No .env file - this is intentional!");
-  }
 }
 
-// async function dbConnect() {
-//   let dbUrl = process.env.DATABASE_URL;
-//   const url = new URL(dbUrl);
-//   log(`DB host: ${url.host}`);
-//   log("Connected");
-
-//   // workaround is to modify expected dns servers
-//   require("node:dns").setServers(["8.8.8.8", "1.1.1.1"]);
-
-//   await mongoose.connect(dbUrl);
-// }
-
-// async function dbDisconnect() {
-//   await mongoose.disconnect();
-// }
-
 async function dbConnect() {
-  const dbUrl = process.env.DATABASE_URL;
+  const isTest = process.env.NODE_ENV === "test";
+
+  const dbUrl = isTest
+    ? process.env.TEST_DATABASE_URL
+    : process.env.DATABASE_URL;
 
   if (!dbUrl) {
-    throw new Error("DATABASE_URL environment variable is not set");
+    throw new Error(
+      isTest
+        ? "TEST_DATABASE_URL environment variable is not set"
+        : "DATABASE_URL environment variable is not set"
+    );
   }
 
   const url = new URL(dbUrl);
-  log(`DB host: ${url.host}`);
 
-  // Workaround for DNS resolution issues.
+  const expectedDatabase = isTest
+    ? "village_wellness_test"
+    : "village-wellness-prod";
+
+  const databaseName = url.pathname.replace(/^\/+/, "").split("/")[0];
+
+  if (databaseName !== expectedDatabase) {
+    throw new Error(
+      `Incorrect database selected. Expected ${expectedDatabase}, received ${databaseName || "default"}`
+    );
+  }
+
+  log(`DB host: ${url.host}`);
+  log(`Database: ${expectedDatabase}`);
+
   require("node:dns").setServers(["8.8.8.8", "1.1.1.1"]);
 
   try {

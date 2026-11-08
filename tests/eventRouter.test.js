@@ -36,8 +36,10 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await EventModel.deleteMany({});
-  await UserModel.deleteMany({});
+  if (testUser?._id) {
+    await EventModel.deleteMany({ user: testUser._id });
+    await UserModel.deleteOne({ _id: testUser._id });
+  }
 });
 
 describe("Event Router", () => {
