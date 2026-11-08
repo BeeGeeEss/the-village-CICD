@@ -116,7 +116,7 @@ moodRouter.patch("/:moodId", checkForUserJwt, checkMoodOwnership, async (request
     const updatedMood = await MoodModel.findByIdAndUpdate(
       request.params.moodId,
       updates,
-      { new: true, runValidators: true }
+      { returnDocument: "after", runValidators: true },
     );
 
     response.json({

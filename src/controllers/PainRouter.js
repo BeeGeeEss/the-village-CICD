@@ -185,7 +185,7 @@ painRouter.patch(
       const updatedPain = await PainModel.findByIdAndUpdate(
         request.params.painId,
         updates,
-        { new: true, runValidators: true },
+        { returnDocument: "after", runValidators: true },
       );
 
       response.json({
