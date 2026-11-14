@@ -1,0 +1,229 @@
+
+name: Reusable Google Cloud Run Deployment
+
+on:
+  workflow_call:
+
+    inputs:
+      image_digest:
+        description: Docker image digest from the build workflow
+        required: true
+        type: string
+
+      app_version:
+        description: Application version
+        required: true
+        type: string
+
+      short_sha:
+        description: Short Git commit SHA
+        required: true
+        type: string
+
+      service_name:
+        description: Target Cloud Run service
+        required: true
+        type: string
+
+    outputs:
+      revision:
+        description: Deployed Cloud Run revision
+        value: ${{ jobs.deploy.outputs.revision }}
+
+      service_url:
+        description: Deployed Cloud Run service URL
+        value: ${{ jobs.deploy.outputs.service_url }}
+
+jobs:
+
+  deploy:
+    name: Deploy and Verify Cloud Run
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    environment:
+      name: production
+
+    permissions:
+      contents: read
+      packages: read
+      id-token: write
+
+    outputs:
+      revision: ${{ steps.revision.outputs.revision }}
+      service_url: ${{ steps.revision.outputs.service_url }}
+
+    steps:
+
+      # 1. PREPARE DEPLOYMENT
+
+      - name: Prepare deployment directories
+        run: |
+          mkdir -p logs
+          mkdir -p metadata
+
+      # 2. GOOGLE CLOUD AUTHENTICATION
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+
+      # 3. DEPLOY CONTAINER
+
+      - name: Deploy to Cloud Run Production
+        env:
+          IMAGE_DIGEST: ${{ inputs.image_digest }}
+          SERVICE_NAME: ${{ inputs.service_name }}
+          GCP_REGION: ${{ vars.GCP_REGION }}
+          GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+        run: |
+          set -o pipefail
+
+          gcloud run deploy "$SERVICE_NAME" \
+            --project="$GCP_PROJECT_ID" \
+            --image="ghcr.io/beegeeess/the-village-cicd@${IMAGE_DIGEST}" \
+            --region="$GCP_REGION" \
+            --service-account="village-api-runtime@the-village-cicd.iam.gserviceaccount.com" \
+            --port=8080 \
+            --min=0 \
+            --max=3 \
+            --set-secrets="DATABASE_URL=DATABASE_URL:latest,JWT_SECRET_KEY=JWT_SECRET_KEY:latest" \
+            --allow-unauthenticated \
+            --quiet 2>&1 | tee logs/production-deploy.log
+
+      # 4. CAPTURE DEPLOYMENT REVISION
+
+      - name: Record Cloud Run revision
+        id: revision
+        env:
+          SERVICE_NAME: ${{ inputs.service_name }}
+          GCP_REGION: ${{ vars.GCP_REGION }}
+          GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+
+          SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" \
+            --project="$GCP_PROJECT_ID" \
+            --region="$GCP_REGION" \
+            --format="value(status.url)")
+
+          REVISION=$(gcloud run services describe "$SERVICE_NAME" \
+            --project="$GCP_PROJECT_ID" \
+            --region="$GCP_REGION" \
+            --format="value(status.latestReadyRevisionName)")
+
+          if [[ -z "$SERVICE_URL" || -z "$REVISION" ]]; then
+            echo "Unable to retrieve Cloud Run deployment details."
+            exit 1
+          fi
+
+          echo "revision=$REVISION" >> "$GITHUB_OUTPUT"
+          echo "service_url=$SERVICE_URL" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "Cloud Run service: $SERVICE_NAME"
+            echo "Cloud Run revision: $REVISION"
+            echo "Service URL: $SERVICE_URL"
+          } | tee -a metadata/production-metadata.txt
+
+      # 5. VERIFY LIVE DEPLOYMENT
+
+      - name: Verify Cloud Run health
+        env:
+          SERVICE_URL: ${{ steps.revision.outputs.service_url }}
+          HEALTH_CHECK_PATH: ${{ vars.HEALTH_CHECK_PATH }}
+        run: |
+          set -euo pipefail
+
+          HEALTH_PATH="${HEALTH_CHECK_PATH:-/health}"
+          HEALTH_URL="${SERVICE_URL}${HEALTH_PATH}"
+
+          echo "Checking: $HEALTH_URL"
+
+          for attempt in {1..12}; do
+            if curl --fail --silent --show-error \
+              --max-time 10 "$HEALTH_URL"; then
+
+              echo "Cloud Run health check successful."
+              exit 0
+            fi
+
+            echo "Attempt $attempt failed. Retrying in 5 seconds..."
+            sleep 5
+          done
+
+          echo "Cloud Run health check failed."
+          exit 1
+
+      # 6. PROMOTE PRODUCTION IMAGE TAGS
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Promote approved image to production tags
+        env:
+          IMAGE_DIGEST: ${{ inputs.image_digest }}
+          APP_VERSION: ${{ inputs.app_version }}
+        run: |
+          set -euo pipefail
+
+          IMAGE="ghcr.io/beegeeess/the-village-cicd@${IMAGE_DIGEST}"
+
+          docker buildx imagetools create \
+            --tag ghcr.io/beegeeess/the-village-cicd:production \
+            "$IMAGE" 2>&1 | tee logs/image-promotion.log
+
+          docker buildx imagetools create \
+            --tag "ghcr.io/beegeeess/the-village-cicd:production-${APP_VERSION}" \
+            "$IMAGE" 2>&1 | tee -a logs/image-promotion.log
+
+      # 7. RECORD DEPLOYMENT METADATA
+
+      - name: Record production metadata
+        if: always()
+        env:
+          IMAGE_DIGEST: ${{ inputs.image_digest }}
+          APP_VERSION: ${{ inputs.app_version }}
+          SHORT_SHA: ${{ inputs.short_sha }}
+          REVISION: ${{ steps.revision.outputs.revision }}
+          SERVICE_URL: ${{ steps.revision.outputs.service_url }}
+        run: |
+          {
+            echo "Environment: production"
+            echo "Application version: ${APP_VERSION}"
+            echo "Git commit: ${GITHUB_SHA}"
+            echo "Short commit SHA: ${SHORT_SHA}"
+            echo "Image digest: ${IMAGE_DIGEST}"
+            echo "Cloud Run revision: ${REVISION:-unavailable}"
+            echo "Service URL: ${SERVICE_URL:-unavailable}"
+            echo "Workflow run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo "Deployment date: $(date -u)"
+          } | tee -a metadata/production-metadata.txt
+
+      # 8. UPLOAD DEPLOYMENT LOGS
+
+      - name: Upload production deployment artefacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-production-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            logs/
+            metadata/
+          if-no-files-found: warn
+          retention-days: 30
