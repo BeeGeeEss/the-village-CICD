@@ -1,3 +1,5 @@
+# The Village Wellness App – Backend CI/CD
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./images/banner-dark.png">
   <source media="(prefers-color-scheme: light)" srcset="images/banner-light.png">
@@ -39,15 +41,32 @@
 
 ## Overview of Project
 
-This repository contains an express.js/node.js backend API for a wellness app. The API includes full CRUD operations for mood, pain, events and users. The API connects to a data in MongoDB Atlas, and uses JWT authentication and roles to for authorisation. This application was created as part of an academic Web Development assessment using MongoDB, Express.js, React and Node.js (MERN Stack).
+This repository contains the containerised Express.js/Node.js backend API for The Village Wellness App. The API provides CRUD operations for users, moods, pains and events, using MongoDB Atlas for persistent data storage and JWT authentication with role-based authorisation.
 
-This assessment has built on the previous project which containerised the backend API using Docker. Using GitHub Actions, the Docker image was been built and published to the GitHub Container Registry (GHCR). In this project the CI/CD component has been extended to include cloud based deployment.
+This project extends the original MERN stack application through Docker containerisation and an automated CI/CD workflow implemented using GitHub Actions.
 
-Visit the project [profile](https://github.com/The-Village-Wellness-App) for more information.
+The deployment workflow integrates automated code validation, testing, Docker image building, container publishing and cloud deployment. Validated images are published to GitHub Container Registry (GHCR) and deployed to Google Cloud Run.
+
+The implementation includes:
+
+- Automated pull request validation using ESLint and Jest.
+- Docker image builds using Docker Buildx.
+- Versioned container publishing to GHCR.
+- Google Cloud authentication using Workload Identity Federation.
+- Automated deployment to Google Cloud Run.
+- Runtime secret management through Google Cloud Secret Manager.
+- Post-deployment health verification.
+- Production image promotion using immutable image digests.
+- Build and deployment artefacts for traceability.
+
+The frontend and backend remain independently maintained projects, with their own repositories and deployment workflows.
+
+Visit the [project organisation](https://github.com/The-Village-Wellness-App) for more information.
 
 ## The Village Wellness App
 
-The Village Wellness App is a web-based health and wellbeing tracking application designed to help users monitor changes in their mood and physical pain over time. The application allows users to record structured entries using rating scales select predefined labels that describe their emotional or physical state, and optionally add contextual notes.
+The Village Wellness App is a web-based health and wellbeing tracking application designed to help users monitor changes in their mood and physical pain over time. The application allows users to record structured entries using rating scales, select predefined labels that describe their emotional or physical state, and optionally add contextual notes.
+
 These entries are then visualised through time-based graphs, enabling users to identify patterns or trends in their wellbeing.
 
 The application also allows users to add event markers to their timeline, such as starting a new medication, beginning therapy, or experiencing a significant life event. These markers provide additional context that may help users understand potential factors influencing their mood or pain levels. By combining structured tracking with visualisation tools, The Village Wellness App aims to support self-reflection and provide users with useful insights that may assist discussions with healthcare professionals.
@@ -59,14 +78,9 @@ The following diagram represents the existing architecture of The Village Wellne
 ```mermaid
 flowchart LR
 
-    %% CLIENTS
-
     F["React Frontend<br/>(Separate Project)"]
 
     I["Insomnia<br/>/ API Client"]
-
-
-    %% EXPRESS API
 
     subgraph API["Express / Node.js REST API"]
 
@@ -89,9 +103,6 @@ flowchart LR
 
     end
 
-
-    %% MONGOOSE MODELS
-
     subgraph MODELS["Mongoose Models"]
 
         UM["User Model"]
@@ -100,9 +111,6 @@ flowchart LR
         EM["Event Model"]
 
     end
-
-
-    %% DATABASE
 
     subgraph DB["MongoDB Atlas"]
 
@@ -115,23 +123,14 @@ flowchart LR
 
     end
 
-
-    %% DEVELOPMENT & TESTING
-
     T["Development & Testing<br/><br/>
     Jest + Supertest"]
-
-
-    %% ENVIRONMENT CONFIGURATION
 
     E["Environment Configuration<br/><br/>
     DATABASE_URL<br/>
     JWT_SECRET_KEY<br/>
     PORT<br/>
     NODE_ENV"]
-
-
-    %% CONNECTIONS
 
     F -->|"HTTP / JSON"| S
     I -->|"HTTP / JSON"| S
@@ -187,59 +186,37 @@ flowchart TB
     ENV -.->|"Runtime configuration"| CONT
     CLIENT -->|"HTTP :3000"| API
     API -->|"Mongoose"| DB
-
 ```
 
 **Figure 2: Containerised Development Architecture**
 
 ## CI/CD Architecture
 
-The following diagram represents the continuous integration and continuous delivery (CI/CD) architecture used to automatically validate, build, tag, and publish the containerised backend application to GitHub Container Registry.
+The following diagram represents the continuous integration and continuous delivery (CI/CD) architecture used to automatically validate, build, tag, publish and deploy the containerised backend application.
 
 GitHub Actions performs code-quality checks and automated testing before building the Docker image.
 
-The resulting image is versioned using environment, application version, and Git commit information before being published to GitHub Container Registry.
+The resulting image is published to GitHub Container Registry. The deployment workflow then uses Google Cloud Workload Identity Federation to authenticate with Google Cloud and deploy the image to Cloud Run.
 
 Runtime environment variables and secrets are supplied separately and are not stored in the Docker image.
 
 ```mermaid
 flowchart TB
 
-    %% DEVELOPER
-
     DEV["Developer"]
 
-    %% SOURCE CONTROL
-
     REPO["GitHub Repository<br/><br/>
-    BeeGeeEss / the-village-container"]
-
-    %% CI/CD PIPELINE
+    BeeGeeEss / the-village-cicd"]
 
     subgraph ACTIONS["GitHub Actions CI/CD Pipeline"]
 
         CHECKOUT["Checkout Code"]
-
-        INSTALL["Install Dependencies<br/><br/>
-        npm ci"]
-
-        LINT["Code Quality Check<br/><br/>
-        npm run lint"]
-
-        TEST["Automated Tests<br/><br/>
-        npm test"]
-
-        BUILD["Build Docker Image<br/><br/>
-        Docker Buildx"]
-
-        TAG["Tag Docker Image<br/><br/>
-        latest<br/>
-        development<br/>
-        1.0.0<br/>
-        development-1.0.0<br/>
-        sha-xxxxxxx"]
-
-        PUSH["Push Image"]
+        INSTALL["Install Dependencies<br/><br/>npm ci"]
+        LINT["Code Quality Check<br/><br/>npm run lint"]
+        TEST["Automated Tests<br/><br/>Jest"]
+        BUILD["Build Docker Image<br/><br/>Docker Buildx"]
+        TAG["Tag Docker Image<br/><br/>Version and Git SHA"]
+        PUSH["Publish Image to GHCR"]
 
         CHECKOUT --> INSTALL
         INSTALL --> LINT
@@ -250,104 +227,118 @@ flowchart TB
 
     end
 
-    %% CONTAINER REGISTRY
-
     GHCR["GitHub Container Registry<br/><br/>
-    ghcr.io/beegeeess/<br/>
-    the-village-container"]
+    ghcr.io/beegeeess/<br/>the-village-cicd"]
 
-    %% RUNTIME
+    APPROVAL["GitHub Environment<br/><br/>
+    Production Approval"]
 
-    CONTAINER["Docker Container<br/><br/>
-    Express / Node.js API"]
+    OIDC["Workload Identity Federation<br/><br/>
+    OIDC Authentication"]
 
-    %% RUNTIME CONFIGURATION
+    subgraph GCP["Google Cloud"]
 
-    SECRETS["Runtime Environment Variables<br/><br/>
-    DATABASE_URL<br/>
-    JWT_SECRET_KEY<br/>
-    PORT<br/>
-    NODE_ENV"]
+        CLOUDRUN["Google Cloud Run<br/><br/>
+        the-village-api-production"]
 
-    %% DATABASE
+        SECRET["Secret Manager<br/><br/>
+        DATABASE_URL<br/>
+        JWT_SECRET_KEY"]
+
+        HEALTH["HTTP Health Check<br/><br/>
+        /health"]
+
+    end
 
     DB["MongoDB Atlas<br/><br/>
     External Managed Database"]
 
-    %% CONNECTIONS
+    PROMOTE["Promote Verified Image Digest<br/><br/>
+    production<br/>
+    production-version"]
 
-    DEV -->|"git push to main"| REPO
-
+    DEV -->|"Push to main"| REPO
     REPO -->|"Workflow trigger"| CHECKOUT
-
     PUSH -->|"Publish image"| GHCR
-
-    GHCR -->|"Pull image"| CONTAINER
-
-    SECRETS -.->|"Secure runtime configuration"| CONTAINER
-
-    CONTAINER -->|"Mongoose"| DB
+    GHCR -->|"Image digest"| APPROVAL
+    APPROVAL --> OIDC
+    OIDC --> CLOUDRUN
+    GHCR -->|"Deploy exact image digest"| CLOUDRUN
+    SECRET -.->|"Runtime secrets"| CLOUDRUN
+    CLOUDRUN -->|"Mongoose"| DB
+    CLOUDRUN --> HEALTH
+    HEALTH -->|"Successful verification"| PROMOTE
+    PROMOTE --> GHCR
 ```
 
 **Figure 3: CI/CD Architecture**
 
 ## Project Features
 
-- Full CRUD operations for users, moods, pains, and events
-- JWT-based authentication with 7-day token expiry
-- Role-based authorization (admin and regular user roles)
-- Date-range filtering for mood and pain entries
-- Secure password hashing with scrypt and salt
-- Comprehensive test coverage (5 test suites across routers)
-- Input validation at model and route levels
-- Consistent error handling with appropriate HTTP status codes
-- Helmet security middleware
-- CORS configuration
-- Automated Jest/Supertest testing
-- Docker containerisation
-- Automated Docker image builds using GitHub Actions
-- Versioned Docker image tags
-- GitHub Container Registry image publishing
+- Full CRUD operations for users, moods, pains and events.
+- JWT-based authentication with 7-day token expiry.
+- Role-based authorisation (admin and regular user roles).
+- Date-range filtering for mood and pain entries.
+- Secure password hashing with scrypt and salt.
+- Comprehensive test coverage across router test suites.
+- Input validation at model and route levels.
+- Consistent error handling with appropriate HTTP status codes.
+- Helmet security middleware.
+- CORS configuration.
+- Automated Jest/Supertest testing.
+- Docker containerisation.
+- Automated Docker image builds using GitHub Actions.
+- Versioned Docker image tags.
+- GitHub Container Registry image publishing.
+
+### CI/CD and Deployment Features
+
+- GitHub Actions automated workflows.
+- Pull request validation before merging into `main`.
+- ESLint code-quality enforcement.
+- Automated Jest testing.
+- Persistent workflow logs and test-result artefacts.
+- Docker image building using Docker Buildx.
+- Automated publishing to GitHub Container Registry.
+- Application version and Git SHA image identification.
+- Google Cloud authentication using Workload Identity Federation (OIDC).
+- Reusable Google Cloud Run deployment workflow.
+- Secure runtime configuration using Secret Manager.
+- Automated Cloud Run health checks.
+- Production image promotion following successful deployment verification.
+- Deployment metadata and artefact retention.
 
 ## Tech Stack
 
 ### Chosen Technologies
 
-- MongoDB
-- Express.js
-- Node.js
-- Mongoose
-- JWT
-- Helmet
-- CORS
-- Jest
-- Supertest
-- Docker
-- GitHub Actions
-- GitHub Container Registry
-
-### Purpose of Each Technology
-
-| Technology                | Purpose                                             |
-| ------------------------- | --------------------------------------------------- |
-| MongoDB                   | Stores the applications data                        |
-| Express.js                | Handles API routing and middleware                  |
-| Node.js                   | Runs the backend server environment                 |
-| Mongoose                  | MongoDB object modelling and database communication |
-| JWT                       | Authentication                                      |
-| Helmet                    | HTTP security headers                               |
-| CORS                      | Cross-origin browser access control                 |
-| Jest                      | Automated testing                                   |
-| Supertest                 | HTTP/API testing                                    |
-| Docker                    | Application containerisation                        |
-| GitHub Actions            | CI/CD automation                                    |
-| GitHub Container Registry | Docker image storage                                |
+| Technology | Purpose |
+| --- | --- |
+| MongoDB Atlas | Stores the application's data |
+| Express.js 5.2.1 | Handles API routing and middleware |
+| Node.js 26 | Runs the backend server environment |
+| Mongoose 9.3.0 | MongoDB object modelling and database communication |
+| JWT | Handles authentication |
+| Helmet | Provides HTTP security headers |
+| CORS | Manages cross-origin browser access control |
+| Jest | Runs automated tests |
+| Supertest | Performs HTTP/API testing |
+| Docker | Provides application containerisation |
+| Docker Buildx | Builds and publishes container images |
+| GitHub Actions | Automates validation, publishing and deployment |
+| GitHub Container Registry | Stores versioned Docker images |
+| Google Cloud Run | Hosts the containerised backend API |
+| Google Cloud IAM | Manages deployment and runtime permissions |
+| Workload Identity Federation | Provides secure GitHub-to-Google authentication |
+| Google Cloud Secret Manager | Stores sensitive runtime configuration |
+| GitHub Actions Artifacts | Retains build, test and deployment evidence |
+| HTTP Health Checks | Verifies successful application deployment |
 
 ### Industry Relevance
 
 The MERN stack is widely used in modern full-stack web development due to its scalability, security, performance and ability to use JavaScript across both frontend and backend development[\*](#references).
 
-The technologies used in the MERN stack are some of the most widely used technologies in present time.
+The technologies used in the MERN stack are widely adopted across contemporary web development.
 
 See State of JavaScript graphs[\*](#references):
 
@@ -359,65 +350,79 @@ See Stack Overflow graphs[\*](#references):
 
 - [MongoDB (No-SQL Databases)](https://survey.stackoverflow.co/2025/technology#most-popular-technologies-database-database)
 - [Node, React, Express Usage](https://survey.stackoverflow.co/2025/technology#most-popular-technologies-webframe-webframe)
-- [Javascript Usage](https://survey.stackoverflow.co/2025/technology#most-popular-technologies-language-language)
+- [JavaScript Usage](https://survey.stackoverflow.co/2025/technology#most-popular-technologies-language-language)
 
 ### Comparison to Alternative Technologies
 
-| Chosen Technology | Alternative | Reason Chosen                                |
-| ----------------- | ----------- | -------------------------------------------- |
-| MongoDB           | PostgreSQL  | Flexible, dynamic, durable, high-performance |
-| Express.js        | Django      | Minimalist, customisable, JavaScript-based   |
-| React             | Angular     | Component flexibility, rapid development     |
-| Node.js           | ASP.NET     | Universal JavaScript development environment |
+| Chosen Technology | Alternative | Reason Chosen |
+| --- | --- | --- |
+| MongoDB | PostgreSQL | Flexible document-based data model |
+| Express.js | Django | Minimalist, customisable, JavaScript-based |
+| React | Angular | Component flexibility, rapid development |
+| Node.js | ASP.NET | JavaScript development across the stack |
 
 ### Licensing Information
 
-| Technology | License                           |
-| ---------- | --------------------------------- |
-| MongoDB    | Server Side Public License (SSPL) |
-| Express.js | MIT License                       |
-| React      | MIT License                       |
-| Node.js    | MIT License                       |
+| Technology | License |
+| --- | --- |
+| MongoDB | Server Side Public License (SSPL) |
+| Express.js | MIT License |
+| React | MIT License |
+| Node.js | MIT License |
 
-\*Note: Though MongoDB uses an SSPL licence, it is still appropriate to licence this project under MIT, because the application:
+*Note: Although MongoDB uses an SSPL licence, it is still appropriate to licence this project under MIT because the application:*
 
-1. Is a public educational project
-2. Uses MongoDB as an external database, and connects through Mongoose
-3. Does not redistribute, modify or host MongoDB software
+1. Is a public educational project.
+2. Uses MongoDB as an external database and connects through Mongoose.
+3. Does not redistribute, modify or host MongoDB software.
 
 ## Packages
 
-```js
-"cors": "^2.8.6",
-"dotenv": "^17.4.2",
-"express": "^5.2.1",
-"helmet": "^8.1.0",
-"jsonwebtoken": "^9.0.3",
-"mongoose": "^9.3.0",
-"smallog": "^1.0.2"
+The application uses the following production dependencies:
 
-devDependencies
+```json
+{
+  "cors": "^2.8.6",
+  "dotenv": "^17.4.2",
+  "express": "^5.2.1",
+  "helmet": "^8.1.0",
+  "jsonwebtoken": "^9.0.3",
+  "mongoose": "^9.3.0",
+  "smallog": "^1.0.2"
+}
+```
 
-"eslint": "^9.39.4",
-"globals": "^17.6.0",
-"jest": "^30.3.0",
-"supertest": "^7.2.2"
+Development dependencies include:
+
+```json
+{
+  "cross-env": "^10.1.0",
+  "eslint": "^9.39.4",
+  "globals": "^17.6.0",
+  "jest": "^30.3.0",
+  "supertest": "^7.2.2"
+}
 ```
 
 ## System Requirements
 
-- Node.js (LTS recommended, v16+)
-- npm
-- A MongoDB database (Atlas or self-hosted)
-- Recommended: 512MB+ RAM for small deployments
+- Node.js 26.
+- npm (compatible with the installed Node.js version).
+- Docker Desktop or Docker Engine.
+- Docker Compose.
+- MongoDB Atlas account or compatible MongoDB database.
+- Git and GitHub account.
+
+For cloud deployment, the application uses Google Cloud Run, Google Cloud IAM and Google Cloud Secret Manager.
 
 ## Project Structure
 
-```js
-📁 the-village-container
+```text
+📁 the-village-CICD
     📁 .github
         📁 workflows
-            ─ docker-publish.yml
+            ─ backend-ci.yml
+            ─ deploy-cloud-run.yml
     📁 images
     📁 src
         📁 controllers
@@ -461,11 +466,11 @@ devDependencies
     ─ README.md
 ```
 
-NOTE: The .env file is not shown in the project structure as it is intentionally kept out of the GitHub repo due to containing configuration and secrects. The example.env file provides on overview on what environment variables need to be configured.
+**Note:** The `.env` file is not shown in the project structure because it is intentionally excluded from the GitHub repository. It contains local configuration and secrets. The `example.env` file provides an overview of the environment variables that need to be configured.
 
 ## Database Structure
 
-This project uses MongoDB as the database, and Mongoose as the connection between the Express app and MongoDB.
+This project uses MongoDB as the database and Mongoose as the connection between the Express application and MongoDB.
 
 MongoDB Atlas is kept external to the Docker container. This allows containers to remain replaceable without affecting persistent application data.
 
@@ -537,17 +542,21 @@ Authentication uses JSON Web Tokens (JWT). Clients send tokens in the `Authoriza
 
 Admin users are not created through the public signup endpoint. Admin accounts must be added directly in the database seed data or created by inserting a user document with `isAdmin: true` into MongoDB.
 
-Password reset flow: the backend exposes endpoints to support a standard "forgot password" flow. Clients should call `POST /users/forgot-password` with an email to initiate a reset; the server will create a short-lived reset token and (in production) send it to the JSON response body. To complete a reset the client calls `POST /users/reset-password` with the token and new password. The server validates the token and updates the hashed password.
+Password reset flow: Users can initiate a password reset through
+`POST /users/forgot-password` using their email address. The server generates a reset token that expires after one hour and returns it in the JSON response.
+
+Users submit the token and new password to `POST /users/reset-password` to complete the reset.
 
 ## API Endpoints
 
 Quick overview:
 
-- **Authorization:** send `Authorization: Bearer <token>` for protected endpoints (all `/moods`, `/pains`, `/events`, and most `/users/*` except `/signup` and `/login`).
-- **Admin-only:** `GET /users`, `GET /users/admin/dashboard` require an admin user. Admin can also find specific user `GET /users/:userId`.
-- **Params & queries:** use route params (`:userId`, `:moodId`, `:eventId`) and optional query filters, e.g. `?startDate=2026-05-01&endDate=2026-05-31`.
-- **Responses:** `201` on create, `200` on success, `400/401/403/404/500` for errors as appropriate.
-- **Example (login):**
+- **Authorization:** Send `Authorization: Bearer <token>` for protected endpoints (all `/moods`, `/pains`, `/events`, and most `/users/*` except `/signup` and `/login`).
+- **Admin-only:** `GET /users` and `GET /users/admin/dashboard` require an admin user. Admins can also find a specific user using `GET /users/:userId`.
+- **Params and queries:** Use route parameters (`:userId`, `:moodId`, `:eventId`) and optional query filters, e.g. `?startDate=2026-05-01&endDate=2026-05-31`.
+- **Responses:** `201` on create, `200` on success, and `400/401/403/404/500` for errors as appropriate.
+
+**Example (login):**
 
 ```bash
 curl -X POST http://localhost:3000/users/login \
@@ -557,48 +566,48 @@ curl -X POST http://localhost:3000/users/login \
 
 ### User Endpoints
 
-- **GET /users** — Admin only: retrieve all users
-- **GET /users/:userId** — Admin or the user themself: retrieve a user's profile (password/salt omitted)
-- **GET /users/admin/dashboard** — Admin only: admin dashboard data
-- **POST /users/signup** — Public: create a new account
-- **POST /users/login** — Public: obtain JWT for login
-- **PATCH /users/:userId** — Authenticated user (self-only): update own profile (username, email, password, theme)
-- **DELETE /users/:userId** — Authenticated user (self-only): delete own account
-- **DELETE /users/:userId/admin** — Admin only: delete another user's account (admins may also use with their own ID)
-- **POST /users/forgot-password** — Public: initiate password reset with `{ email }`; server generates a short-lived token and sends it by email (token not returned in API responses)
-- **POST /users/reset-password** — Public: complete reset with `{ token, password }`; server validates token and updates hashed password
+- **GET /users** — Admin only: retrieve all users.
+- **GET /users/:userId** — Admin or the user themself: retrieve a user's profile (password/salt omitted).
+- **GET /users/admin/dashboard** — Admin only: admin dashboard data.
+- **POST /users/signup** — Public: create a new account.
+- **POST /users/login** — Public: obtain JWT for login.
+- **PATCH /users/:userId** — Authenticated user (self-only): update own profile (username, email, password, theme).
+- **DELETE /users/:userId** — Authenticated user (self-only): delete own account.
+- **DELETE /users/:userId/admin** — Admin only: delete another user's account (admins may also use with their own ID).
+- **POST /users/forgot-password** - Generates a password-reset token for the user's email address. The token expires after one hour and is returned in the JSON response as `resetToken`.
+- **POST /users/reset-password** - Resets the user's password using the supplied reset token and new password.
 
-Note: the `forgot-password` flow is email/token-based so users do not need to provide their internal MongoDB `_id`. There is no admin-only reset endpoint implemented by default. Admins who need to reset a user's password must perform the change directly in the database/seed data.
+**Note:** The `forgot-password` flow is email/token-based, so users do not need to provide their internal MongoDB `_id`. There is no admin-only reset endpoint implemented by default. Admins who need to reset a user's password must perform the change directly in the database/seed data.
 
 ### Mood Endpoints
 
-- **GET /moods** - Retrieve all mood entries
-- **GET /moods/moodId** - Retrieve a specific mood entry
-- **POST /moods** - Create a mood entry
-- **PATCH /moods/moodId** - Update a mood entry
-- **DELETE /moods/moodId** - Delete a mood entry
+- **GET /moods** — Retrieve all mood entries.
+- **GET /moods/:moodId** — Retrieve a specific mood entry.
+- **POST /moods** — Create a mood entry.
+- **PATCH /moods/:moodId** — Update a mood entry.
+- **DELETE /moods/:moodId** — Delete a mood entry.
 
 ### Pain Endpoints
 
-- **GET /pains** - Retrieve all pain entries
-- **GET /pains/painId** - Retrieve a specific pain entry
-- **POST /pains** - Create a pain entry
-- **PATCH /pains/painId** - Update a pain entry
-- **DELETE /pains/painId** - Delete a pain entry
+- **GET /pains** — Retrieve all pain entries.
+- **GET /pains/:painId** — Retrieve a specific pain entry.
+- **POST /pains** — Create a pain entry.
+- **PATCH /pains/:painId** — Update a pain entry.
+- **DELETE /pains/:painId** — Delete a pain entry.
 
 ### Event Endpoints
 
-- **GET /events** - Retrieve all event entries
-- **GET /events/eventId** - Retrieve a specific event entry
-- **POST /events** - Create an event entry
-- **PATCH /events/eventId** - Update an event entry
-- **DELETE /events/eventId** - Delete an event entry
+- **GET /events** — Retrieve all event entries.
+- **GET /events/:eventId** — Retrieve a specific event entry.
+- **POST /events** — Create an event entry.
+- **PATCH /events/:eventId** — Update an event entry.
+- **DELETE /events/:eventId** — Delete an event entry.
 
 ## API Request Handling
 
 - Requests and responses use JSON bodies.
 - Route parameters (`:userId`, `:moodId`, etc.) and query parameters (e.g. `startDate` / `endDate`) are used for resource selection and filtering.
-- Authorization is enforced by middleware that reads `Authorization` headers and attaches the authenticated user to `request.customData.user`.
+- Authorisation is enforced by middleware that reads `Authorization` headers and attaches the authenticated user to `request.customData.user`.
 - Input is validated at the route and model level; Mongoose schemas enforce field constraints.
 
 ## Security
@@ -607,8 +616,11 @@ Note: the `forgot-password` flow is email/token-based so users do not need to pr
 - CORS is configured to restrict origins; adjust `src/server.js` `handyCorsConfig` for production domains.
 - Passwords are salted and hashed using `scrypt` (see `UserModel`).
 - Store `JWT_SECRET_KEY` and database credentials in environment variables and run the service behind HTTPS.
-- The Docker container runs the application using the non-root node user.
-  This reduces the privileges available to the application process inside the container.
+- The Docker container runs the application using the non-root `node` user. This reduces the privileges available to the application process inside the container.
+- Google Cloud Secret Manager supplies sensitive runtime configuration to the Cloud Run service.
+- Workload Identity Federation allows GitHub Actions to authenticate with Google Cloud without storing long-lived service account keys in the repository.
+
+The Cloud Run service is configured to allow unauthenticated invocation at the service level. This makes the API endpoint publicly reachable; protected API operations still rely on the application's JWT authentication and authorisation middleware.
 
 ## Error Handling
 
@@ -616,20 +628,22 @@ Routes return appropriate HTTP status codes: `400` for bad requests/validation e
 
 ## Installation
 
-Clone, install, and create env file, then run locally:
+Clone the repository, install dependencies and create the local environment file:
 
 ```bash
-git clone https://github.com/The-Village-Wellness-App/the-village-container.git
-cd the-village-container
-npm install
+git clone https://github.com/BeeGeeEss/the-village-CICD.git
+cd the-village-CICD
+npm ci
 npm run setup:env
 npm run db:seed
-npm run start   # or `npm run dev` for hot-reloading
+npm run start
 ```
+
+Use `npm run dev` instead of `npm run start` to run the development server with automatic reloads.
 
 ## Environment Variables
 
-To run this project, create an `.env` file in the root directory by running `setup:env`
+To run this project, create an `.env` file in the root directory by running `npm run setup:env`.
 
 ```env
 PORT=3000
@@ -638,16 +652,23 @@ JWT_SECRET_KEY=
 NODE_ENV=development
 ```
 
-The repository’s .gitignore and .dockerignore exclude .env.
-The included example.env file can be used as a template without containing real secrets.
+The repository's `.gitignore` and `.dockerignore` exclude `.env`.
+
+The included `example.env` file can be used as a template without containing real secrets.
 
 ## Running the Server
 
-Run the production server by entering into the terminal
-`npm run start`
+Run the production server:
 
-Or if you want hot-reloading, run dev mode
-`npm run dev`
+```bash
+npm run start
+```
+
+To enable automatic reloading during development:
+
+```bash
+npm run dev
+```
 
 ## Docker Containerisation
 
@@ -657,21 +678,29 @@ Docker packages the backend application and its dependencies into a reusable con
 
 The Dockerfile uses an official Node.js 26 Alpine Linux base image:
 
-`FROM node:26-alpine`
+```dockerfile
+FROM node:26-alpine
+```
 
 Application dependencies are installed using `npm ci`. Development dependencies are excluded from the runtime image:
 
-`RUN npm ci --omit=dev`
+```dockerfile
+RUN npm ci --omit=dev
+```
 
 Docker Compose is used to define the development container's runtime configuration. The `compose.yaml` file specifies how the Dockerfile is built, maps the application port, and provides environment variables to the container.
 
 The development container can be built using:
 
-`docker compose build`
+```bash
+docker compose build
+```
 
 The development container can then be started using:
 
-`docker compose up`
+```bash
+docker compose up
+```
 
 The Compose configuration loads environment variables from the local `.env` file at runtime. This ensures that sensitive configuration such as the MongoDB connection string and JWT secret are not stored in the GitHub repository or included in the Docker image.
 
@@ -685,135 +714,348 @@ MongoDB is not containerised as part of this project. The application connects t
 
 To stop the development container:
 
-`docker compose down`
+```bash
+docker compose down
+```
 
-### Production Environment
+### Production Image Testing
 
-GitHub Actions automatically builds and publishes validated Docker images to GitHub Container Registry (GHCR).
+The production container image is published to GitHub Container Registry (GHCR) following successful application validation and Docker image building.
 
-The production image is identified using the `production` tag and versioned release tags. For example:
+The image can be retrieved locally for independent testing:
 
-`ghcr.io/beegeeess/the-village-container:production`
-
-A specific application version can also be pulled using its version tag:
-
-`ghcr.io/beegeeess/the-village-container:1.0.0`
-
-The production image can be pulled from GitHub Container Registry using:
-
-`docker pull ghcr.io/beegeeess/the-village-container:production`
+```bash
+docker pull ghcr.io/beegeeess/the-village-cicd:production
+```
 
 ![Pulling production image](images/production-pull.png)
 
-The image can then be run with production environment variables supplied at runtime:
+The image can then be run locally with runtime environment variables supplied separately:
 
-`docker run --env-file .env.production -p 3000:3000 ghcr.io/beegeeess/the-village-container:production`
+```bash
+docker run --env-file .env.production -p 8080:8080 ghcr.io/beegeeess/the-village-cicd:production
+```
 
-![Production server](images/production-server.png)
-
-The `.env.production` file is not committed to the repository and contains the production runtime configuration, including:
+The `.env.production` file is not committed to the repository and contains the required runtime configuration, including:
 
 - `DATABASE_URL`
 - `JWT_SECRET_KEY`
 - `PORT`
 - `NODE_ENV=production`
 
-This approach keeps sensitive configuration outside the Docker image and allows the same container image to be configured for different environments at runtime.
+![Production server](images/production-server.png)
 
-The production image can be tested by accessing the API at:
+In the deployed production environment, Google Cloud Run manages the container lifecycle and retrieves sensitive configuration from Google Cloud Secret Manager.
 
-`http://localhost:3000`
+This separates local container testing from the automated cloud deployment process.
 
-and sending API requests using an API client such as Insomnia.
+The production image can be tested locally by accessing the API at:
 
-This demonstrates that the Docker image published by the CI/CD pipeline can be retrieved from GHCR and successfully run as a production-configured container.
+`http://localhost:8080`
+
+API requests can then be sent using an API client such as Insomnia.
 
 ![Production API Testing with JWT Auth](images/production-data-JWT.png)
 
 ## Docker Image Tags
 
-Images are stored using GitHub Container Registry.
+Docker images are published to GitHub Container Registry (GHCR).
 
-The image naming convention is:
-ghcr.io/beegeeess/the-village-container:(insert tag)
+**Registry:**
 
-The Village container generates the following tags:
+`ghcr.io/beegeeess/the-village-cicd`
 
-- ghcr.io/beegeeess/the-village-container:latest | Most recent Image
-- ghcr.io/beegeeess/the-village-container:development | Development Environment
-- ghcr.io/beegeeess/the-village-container:testing | Test Environment
-- ghcr.io/beegeeess/the-village-container:production | Production Environment
-- ghcr.io/beegeeess/the-village-container:1.0.0 | Application Version
-- ghcr.io/beegeeess/the-village-container:production-1.0.0 | Environment and Version
-- ghcr.io/beegeeess/the-village-container:sha-xxxxxxx | Specific Git Commit
+The build workflow creates the following tags:
+
+| Tag | Purpose |
+| --- | --- |
+| `latest` | Most recently published image |
+| `development` | Development image reference |
+| `testing` | Testing image reference |
+| `1.0.0` | Application version |
+| `sha-xxxxxxx` | Specific Git commit |
+
+The build tags identify the image produced by the main-branch build. They do not represent separate deployed development and testing environments.
+
+Following successful production deployment and health verification, the deployment workflow promotes the same image digest to:
+
+| Tag | Purpose |
+| --- | --- |
+| `production` | Production image reference |
+| `production-1.0.0` | Versioned production image |
+
+The version examples above illustrate the tag format. The workflow obtains the actual application version from `package.json`.
+
+Using image digests ensures that production deployment uses the exact container image that passed the preceding build and publishing process.
+
+[View container images in GHCR](https://github.com/BeeGeeEss/the-village-cicd/pkgs/container/the-village-cicd)
 
 ## CI/CD
 
-GitHub Actions automates the Docker image build and publishing process.
+GitHub Actions automates the backend validation, container publishing and cloud deployment processes.
 
-The workflow is triggered when code is pushed to the main branch or when manually triggered.
+The implementation uses two coordinated workflow files:
 
-The workflow:
+- `.github/workflows/backend-ci.yml`
+- `.github/workflows/deploy-cloud-run.yml`
+
+### Workflow Triggers
+
+The main workflow is triggered by:
+
+| Event | Behaviour |
+| --- | --- |
+| Pull request to `main` | Runs application validation |
+| Push to `main` | Runs validation, builds and publishes the Docker image, then deploys to Cloud Run |
+| Manual workflow dispatch | Allows the workflow to be initiated manually |
+
+Container publishing and deployment are restricted to the `main` branch. Pull requests must pass validation before changes can be merged.
+
+### 1. Application Validation
+
+The `validate` job performs the following steps:
 
 1. Checks out the repository.
-2. Sets up Node.js and installs project dependencies.
-3. Runs ESLint to check code quality.
-4. Runs the Jest and Supertest automated test suite.
-5. Sets up Docker Buildx.
-6. Converts the repository name to lowercase for Docker compatibility.
-7. Reads the application version from package.json.
-8. Generates a short Git commit identifier.
-9. Authenticates with GitHub Container Registry.
-10. Builds the Docker image.
-11. Applies environment, version, and Git commit tags.
-12. Pushes the validated image to GHCR.
+2. Creates log and test-result directories.
+3. Sets up Node.js 26.
+4. Installs dependencies using `npm ci`.
+5. Runs ESLint using `npm run lint`.
+6. Runs automated Jest tests using `npm test`.
+7. Generates a structured Jest JSON report.
+8. Uploads validation logs and test results as GitHub Actions artefacts.
 
-The Docker image is only built and published after the linting and automated tests complete successfully.
+Test configuration is supplied through GitHub Actions secrets, including `TEST_DATABASE_URL` and `JWT_SECRET_KEY`.
 
-The workflow uses the GitHub-provided GITHUB_TOKEN for authentication to GHCR.
+Validation artefacts are retained for 30 days.
 
-Application secrets such as DATABASE_URL and JWT_SECRET_KEY are not stored in the repository or Docker image.
+### 2. Docker Build and Publishing
+
+Following successful validation on the `main` branch, the `build_container` job:
+
+1. Checks out the repository.
+2. Reads the application version from `package.json`.
+3. Retrieves the Git commit SHA.
+4. Configures Docker Buildx.
+5. Authenticates with GitHub Container Registry using `GITHUB_TOKEN`.
+6. Builds and publishes the Docker image.
+7. Records the image digest and build metadata.
+8. Uploads build metadata as a GitHub Actions artefact.
+
+The workflow publishes the image to:
+
+`ghcr.io/beegeeess/the-village-cicd`
+
+The image is tagged with application version and Git commit information to support traceability.
+
+### 3. Google Cloud Run Deployment
+
+After the container image has been successfully published, the `deploy_production` job calls the reusable `deploy-cloud-run.yml` workflow.
+
+Google Cloud authentication uses Workload Identity Federation (OIDC), avoiding the need to store long-lived Google Cloud service account keys in GitHub secrets.
+
+The deployment process:
+
+1. Authenticates with Google Cloud.
+2. Configures the Google Cloud SDK.
+3. Deploys the published container image to Google Cloud Run.
+4. Supplies the runtime service account.
+5. Configures the application port and scaling limits.
+6. Retrieves runtime secrets from Google Cloud Secret Manager.
+7. Captures the Cloud Run revision and service URL.
+8. Performs an automated HTTP health check against `/health`.
+9. Promotes the successfully deployed image to production registry tags.
+10. Records deployment metadata and uploads logs as workflow artefacts.
+
+### 4. Production Deployment Protection
+
+Production deployments are protected through GitHub Environments.
+
+The production environment requires manual approval from at least one authorised GitHub reviewer before the deployment job can proceed.
+
+This introduces a manual approval checkpoint between container publishing and production deployment, providing an additional layer of deployment control.
+
+Once approved, GitHub Actions deploys the verified container image to Google Cloud Run.
+
+### 5. Immutable Image Deployment
+
+The deployment workflow uses the Docker image digest generated during the build process rather than relying on a mutable image tag.
+
+This ensures that the image deployed to Cloud Run is the exact image that was built and published by the preceding workflow.
+
+Following successful deployment verification, the image is promoted to:
+
+- `production`
+- `production-<application-version>`
+
+This provides a consistent link between the application source code, published container image and deployed Cloud Run revision.
+
+### 6. Workflow Artefacts and Traceability
+
+The workflows retain diagnostic and deployment information to support troubleshooting and verification.
+
+| Artefact | Information retained |
+| --- | --- |
+| Validation logs | Dependency installation, ESLint and Jest output |
+| Test results | Structured Jest test results |
+| Build metadata | Application version, commit SHA and image digest |
+| Deployment logs | Cloud Run deployment and image promotion output |
+| Production metadata | Cloud Run revision, service URL and deployed image digest |
+
+Workflow artefacts are retained for 30 days.
+
+### Workflow Concurrency
+
+GitHub Actions uses concurrency controls to manage workflow executions for the same Git reference.
+
+This helps prevent overlapping workflow executions for the same branch and reduces the risk of competing deployment processes.
+
+### Workflow Files
+
+- [Backend CI workflow](.github/workflows/backend-ci.yml)
+- [Reusable Cloud Run deployment workflow](.github/workflows/deploy-cloud-run.yml)
+- [GitHub Actions](https://github.com/BeeGeeEss/the-village-cicd/actions)
 
 ## Container Registry
 
-GitHub Container Registry (GHCR) stores the Docker images produced by the CI/CD workflow.
+GitHub Container Registry (GHCR) is used to store and distribute the Docker images generated by the GitHub Actions workflow.
 
-The registry path is:
+**Registry:** `ghcr.io/beegeeess/the-village-cicd`
 
-ghcr.io/beegeeess/the-village-container
+The registry provides:
 
-Using GHCR keeps the container images associated with the GitHub repository and its source-code history.
+- Centralised container image storage.
+- Versioned image references.
+- Git commit traceability.
+- Immutable image digest identification.
+- Production image promotion following successful deployment verification.
 
-The image tags allow a specific version or commit to be identified and deployed. [See Tags Here.](#docker-image-tags)
+The build workflow publishes the initial image tags, while the deployment workflow promotes the verified image digest to production tags.
+
+[View published container images](https://github.com/BeeGeeEss/the-village-CICD/pkgs/container/the-village-cicd)
 
 ## Scripts
 
-The following scripts can be used for this project:
+The following npm scripts are available:
 
-| Script      | Description                                          |
-| ----------- | ---------------------------------------------------- |
-| `lint`      | Formats JavaScript code to ESLint standards          |
-| `start`     | Starts the production server                         |
-| `dev`       | Starts the development server with automatic reloads |
-| `test`      | Runs the Jest test suite                             |
-| `setup:env` | Creates and sets up the environment file             |
-| `db:seed`   | Seeds the database                                   |
-| `db:wipe`   | Wipes the database                                   |
-| `db:reset`  | Wipes & seeds the database                           |
+| Script | Description |
+| --- | --- |
+| `npm start` | Starts the production application |
+| `npm run dev` | Starts the development server with automatic reloads |
+| `npm run lint` | Runs ESLint code-quality checks |
+| `npm test` | Runs the Jest automated test suite |
+| `npm run setup:env` | Creates the local environment file |
+| `npm run db:seed` | Seeds the database |
+| `npm run db:wipe` | Removes database records |
+| `npm run db:reset` | Wipes and reseeds the database |
+
+### Automated CI Testing
+
+The GitHub Actions validation workflow executes:
+
+```bash
+npm ci
+npm run lint
+npm test -- --runInBand
+```
+
+The test environment receives its database connection and JWT configuration through GitHub Actions secrets.
 
 ## Testing
 
-The user can run test files individually by running, for example
-`npm run test userRouter.test.js`
+The backend uses Jest and Supertest to perform automated testing of API routes, controllers and application behaviour.
 
-Or by running all suites
-`npm run test`
+### Run all tests
 
-Testing is seperate from the runtime Docker image as Jest and Supertest are development dependencies.
+```bash
+npm test
+```
+
+### Run an individual test file
+
+```bash
+npm test -- userRouter.test.js
+```
+
+### Run tests in sequence
+
+```bash
+npm test -- --runInBand
+```
+
+### Continuous Integration Testing
+
+The GitHub Actions workflow automatically executes linting and the Jest test suite before allowing container publishing to proceed.
+
+Test results and execution logs are retained as GitHub Actions artefacts for 30 days. The workflow also generates a structured Jest JSON report to support test-result analysis.
+
+Testing dependencies, including Jest and Supertest, are development dependencies and are excluded from the production Docker runtime image.
 
 ## Deployment
 
-This app can be deployed to any Node hosting (Render, Heroku, etc.). Set environment variables (`PORT`, `DATABASE_URL`/`MONGO_URI`, `JWT_SECRET_KEY`) in the host dashboard and use `npm run start` as the start command.
+The backend application is containerised using Docker and deployed to Google Cloud Run.
+
+### Google Cloud Run
+
+The GitHub Actions deployment workflow targets the following Cloud Run service:
+
+`the-village-api-production`
+
+The deployment uses:
+
+- Google Cloud Run for container hosting.
+- GitHub Container Registry for Docker image storage.
+- Workload Identity Federation for GitHub-to-Google authentication.
+- Google Cloud Secret Manager for sensitive runtime configuration.
+- A dedicated runtime service account.
+- Automated HTTP health verification.
+
+The service is configured to use port `8080`, with a minimum instance count of `0` and maximum instance count of `3`.
+
+### Live API
+
+The backend API is deployed to Google Cloud Run.
+
+**Production service:** `the-village-api-production`
+
+**API endpoint:** [Insert actual Cloud Run service URL]
+
+**Health endpoint:** `/health`
+
+### Runtime Configuration
+
+The application receives sensitive configuration at runtime through Google Cloud Secret Manager.
+
+The following secrets are configured:
+
+- `DATABASE_URL`
+- `JWT_SECRET_KEY`
+
+These values are not committed to the repository or embedded in the Docker image.
+
+### Deployment Verification
+
+After deployment, GitHub Actions retrieves the Cloud Run service URL and deployed revision.
+
+An automated HTTP request is made to the `/health` endpoint to verify that the application is responding.
+
+The workflow retries the health check before failing the deployment.
+
+Production image tags are promoted only after successful health verification.
+
+### Deployment Traceability
+
+Each deployment records:
+
+- Application version.
+- Full Git commit SHA.
+- Docker image digest.
+- Cloud Run revision.
+- Cloud Run service URL.
+- GitHub Actions workflow run.
+
+This provides traceability between the source code, published container and deployed application.
+
+[View deployment workflow runs](https://github.com/BeeGeeEss/the-village-cicd/actions)
 
 ## JavaScript Style Guide
 
@@ -825,9 +1067,9 @@ To check code style:
 npm run lint
 ```
 
-For more information on ESLint - [Click: ESLint Documentation.](https://eslint.org/)
+For more information on ESLint, see the [ESLint Documentation](https://eslint.org/).
 
-For this project's internal Style Guide - [Click: JavaScript Style Guide.](https://github.com/The-Village-Wellness-App/village-documentation/blob/main/javascript-style-guide.md)
+For this project's internal style guide, see the [JavaScript Style Guide](https://github.com/The-Village-Wellness-App/village-documentation/blob/main/javascript-style-guide.md).
 
 ## License
 
@@ -837,18 +1079,18 @@ This project uses third-party technologies including MongoDB, which is licensed 
 
 ## References
 
-> [MongoDB. (2026). _MERN Stack Explained_. Retrieved May 24, 2026, from https://www.mongodb.com/resources/languages/mern-stack](#tech-stack)
+> [MongoDB. (2026). MERN Stack Explained_. Retrieved May 24, 2026, from https://www.mongodb.com/resources/languages/mern-stack](#tech-stack)
 
-> [State of JavaScript. (2025). _State of JavaScript 2025: Libraries_. Retrieved May 24, 2026, from https://2025.stateofjs.com/en-US/libraries/](#tech-stack)
+> [State of JavaScript. (2025). State of JavaScript 2025: Libraries_. Retrieved May 24, 2026, from https://2025.stateofjs.com/en-US/libraries/](#tech-stack)
 
-> [Stack Overflow. (2025). _2025 Developer Survey_. Retrieved May 24, 2026, from https://survey.stackoverflow.co/2025/](#tech-stack)
+> [Stack Overflow. (2025). 2025 Developer Survey_. Retrieved May 24, 2026, from https://survey.stackoverflow.co/2025/](#tech-stack)
 
 ## Authors
 
 ### Backend API
 
-Created by [WhiteHotThrash](https://github.com/tim-maastricht) & [✨BeeGeeEss✨](https://github.com/BeeGeeEss)
+Created by [WhiteHotThrash](https://github.com/tim-maastricht) and [✨BeeGeeEss✨](https://github.com/BeeGeeEss).
 
 ## Containerised Project
 
-Created by [✨BeeGeeEss✨](https://github.com/BeeGeeEss)
+Created by [✨BeeGeeEss✨](https://github.com/BeeGeeEss).

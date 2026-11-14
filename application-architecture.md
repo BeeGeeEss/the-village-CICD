@@ -344,7 +344,7 @@ flowchart TB
     %% SOURCE CONTROL
 
     REPO["GitHub Repository<br/><br/>
-    BeeGeeEss / the-village-container"]
+    BeeGeeEss / the-village-cicd"]
 
     %% CI/CD PIPELINE
 
@@ -386,7 +386,7 @@ flowchart TB
 
     GHCR["GitHub Container Registry<br/><br/>
     ghcr.io/beegeeess/<br/>
-    the-village-container"]
+    the-village-cicd"]
 
     %% RUNTIME
 
@@ -462,7 +462,7 @@ GitHub Container Registry stores the Docker images produced by the CI/CD workflo
 
 The registry path is:
 
-`ghcr.io/beegeeess/the-village-container:(insert tag)`
+`ghcr.io/beegeeess/the-village-cicd:(insert tag)`
 
 Using GHCR keeps the container images associated with the GitHub repository and its source-code history.
 
@@ -470,19 +470,19 @@ The image tags allow a specific version or commit to be identified and deployed.
 
 The projects tags are:
 
-- ghcr.io/beegeeess/the-village-container:latest
-- ghcr.io/beegeeess/the-village-container:development
-- ghcr.io/beegeeess/the-village-container:testing
-- ghcr.io/beegeeess/the-village-container:production
-- ghcr.io/beegeeess/the-village-container:${{ env.APP_VERSION }}
-- ghcr.io/beegeeess/the-village-container:production-${{ env.APP_VERSION }}
-- ghcr.io/beegeeess/the-village-container:sha-${{ env.SHORT_SHA }}
+- ghcr.io/beegeeess/the-village-cicd:latest
+- ghcr.io/beegeeess/the-village-cicd:development
+- ghcr.io/beegeeess/the-village-cicd:testing
+- ghcr.io/beegeeess/the-village-cicd:production
+- ghcr.io/beegeeess/the-village-cicd:${{ env.APP_VERSION }}
+- ghcr.io/beegeeess/the-village-cicd:production-${{ env.APP_VERSION }}
+- ghcr.io/beegeeess/the-village-cicd:sha-${{ env.SHORT_SHA }}
 
 The registry provides a central location from which the container image can be retrieved and run independently of the developer's local Docker environment.
 
 For example, the production image can be retrieved using:
 
-`docker pull ghcr.io/beegeeess/the-village-container:production`
+`docker pull ghcr.io/beegeeess/the-village-cicd:production`
 
 The image can then be run locally with the required environment configuration supplied at runtime.
 

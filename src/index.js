@@ -1,3 +1,4 @@
+
 const log = require("smallog");
 const { app } = require("./server.js");
 const { loadEnvFile } = require("node:process");
@@ -13,9 +14,11 @@ try {
 
 // Connect to the database
 const { dbConnect } = require("./utils/dbConnectionManager");
+
 dbConnect().then(() => {
-  // Run the server
-  app.listen(process.env.PORT || 3000, () => {
-    log("Server is running on http://localhost:3000/");
+  const port = process.env.PORT || 3000;
+
+  app.listen(port, () => {
+    log(`Server is running on port ${port}`);
   });
 });
