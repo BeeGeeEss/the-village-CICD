@@ -1,3 +1,4 @@
+
 require("dotenv").config();
 const request = require("supertest");
 const { app } = require("../src/server");
@@ -17,6 +18,17 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+  // Remove leftover test users from previous runs
+  await UserModel.deleteMany({
+    email: {
+      $in: [
+        "user@example.com",
+        "newuser@example.com",
+        "other@example.com",
+      ],
+    },
+  });
+
   testUser = await new UserModel({
     username: "testuser",
     email: "user@example.com",
@@ -27,6 +39,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  // Remove users created during the test
   await UserModel.deleteMany({
     email: {
       $in: [
@@ -114,6 +127,7 @@ describe("User Router", () => {
     expect(response.status).toBe(200);
     expect(Array.isArray(response.body.data)).toBe(true);
     expect(response.body.count).toBeGreaterThanOrEqual(2);
+
     // Check that sensitive fields are excluded
     expect(response.body.data[0].password).toBeUndefined();
     expect(response.body.data[0].salt).toBeUndefined();

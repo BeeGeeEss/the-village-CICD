@@ -1,3 +1,4 @@
+
 require("dotenv").config();
 const request = require("supertest");
 const { app } = require("../src/server");
@@ -19,6 +20,9 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+  // Remove any leftover test user from a previous run
+  await UserModel.deleteOne({ username: "testuser" });
+
   testUser = await new UserModel({
     username: "testuser",
     email: "test@example.com",
