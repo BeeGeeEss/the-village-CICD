@@ -330,6 +330,8 @@ The GitHub production environment demonstrates the manual approval requirement c
 
 ![GitHub production environment protection](docs/images/production-environment.png)
 
+Note: Artifacts are stored after each successful run.
+
 ### Google Cloud Run Deployment
 
 The Cloud Run deployment demonstrates that the container image was deployed to the production service and passed the deployment health verification.
