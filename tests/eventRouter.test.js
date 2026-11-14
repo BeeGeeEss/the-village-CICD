@@ -1,4 +1,3 @@
-
 require("dotenv").config();
 const request = require("supertest");
 const { app } = require("../src/server");
@@ -11,6 +10,9 @@ let testUser;
 let testToken;
 let testEvent;
 
+const testUsername = "event-router-testuser";
+const testEmail = "event-router-test@example.com";
+
 beforeAll(async () => {
   await dbConnect();
 });
@@ -20,12 +22,21 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  // Remove any leftover test user from a previous run
-  await UserModel.deleteOne({ username: "eventuser" });
+  const existingUser = await UserModel.findOne({
+    $or: [
+      { username: testUsername },
+      { email: testEmail },
+    ],
+  });
+
+  if (existingUser) {
+    await EventModel.deleteMany({ user: existingUser._id });
+    await UserModel.deleteOne({ _id: existingUser._id });
+  }
 
   testUser = await new UserModel({
-    username: "eventuser",
-    email: "event@example.com",
+    username: testUsername,
+    email: testEmail,
     password: "password123",
   }).save();
 
