@@ -1,31 +1,43 @@
-
 require("dotenv").config();
+
 const request = require("supertest");
 const { app } = require("../src/server");
 const { UserModel } = require("../src/models/UserModel");
 const { PainModel } = require("../src/models/PainModel");
 const { generateJwt } = require("../src/utils/jwtUtils");
-const { dbConnect, dbDisconnect } = require("../src/utils/dbConnectionManager");
+const {
+  dbConnect,
+  dbDisconnect,
+} = require("../src/utils/dbConnectionManager");
 
 let testUser;
 let testToken;
 let testPain;
 
+const testUsername = "pain-router-testuser";
+const testEmail = "pain-router-test@example.com";
+
 beforeAll(async () => {
   await dbConnect();
 });
 
-afterAll(async () => {
-  await dbDisconnect();
-});
-
 beforeEach(async () => {
-  // Remove any leftover test user from a previous run
-  await UserModel.deleteOne({ username: "painuser" });
+  // Remove leftover records from previous test runs.
+  const existingUser = await UserModel.findOne({
+    username: testUsername,
+  });
+
+  if (existingUser) {
+    await PainModel.deleteMany({ user: existingUser._id });
+  }
+
+  await UserModel.deleteOne({
+    username: testUsername,
+  });
 
   testUser = await new UserModel({
-    username: "painuser",
-    email: "pain@example.com",
+    username: testUsername,
+    email: testEmail,
     password: "password123",
   }).save();
 
@@ -41,9 +53,18 @@ beforeEach(async () => {
 
 afterEach(async () => {
   if (testUser?._id) {
-    await PainModel.deleteMany({ user: testUser._id });
-    await UserModel.deleteOne({ _id: testUser._id });
+    await PainModel.deleteMany({
+      user: testUser._id,
+    });
+
+    await UserModel.deleteOne({
+      _id: testUser._id,
+    });
   }
+});
+
+afterAll(async () => {
+  await dbDisconnect();
 });
 
 describe("Pain Router", () => {
@@ -77,7 +98,10 @@ describe("Pain Router", () => {
     const response = await request(app)
       .patch(`/pains/${testPain._id}`)
       .set("Authorization", `Bearer ${testToken}`)
-      .send({ value: 4, optional_text: "Feeling better" });
+      .send({
+        value: 4,
+        optional_text: "Feeling better",
+      });
 
     expect(response.status).toBe(200);
     expect(response.body.data.value).toBe(4);

@@ -1,31 +1,45 @@
-
 require("dotenv").config();
+
 const request = require("supertest");
 const { app } = require("../src/server");
 const { UserModel } = require("../src/models/UserModel");
 const { MoodModel } = require("../src/models/MoodModel");
 const { generateJwt } = require("../src/utils/jwtUtils");
-const { dbConnect, dbDisconnect } = require("../src/utils/dbConnectionManager");
+const {
+  dbConnect,
+  dbDisconnect,
+} = require("../src/utils/dbConnectionManager");
 
 let testUser;
 let testToken;
 let testMood;
 
+const testUsername = "mood-router-testuser";
+const testEmail = "mood-router-test@example.com";
+
 beforeAll(async () => {
   await dbConnect();
 });
 
-afterAll(async () => {
-  await dbDisconnect();
-});
-
 beforeEach(async () => {
-  // Remove any leftover test user from a previous run
-  await UserModel.deleteOne({ username: "testuser" });
+  // Remove leftover records from previous test runs.
+  const existingUser = await UserModel.findOne({
+    username: testUsername,
+  });
+
+  if (existingUser) {
+    await MoodModel.deleteMany({
+      user: existingUser._id,
+    });
+  }
+
+  await UserModel.deleteOne({
+    username: testUsername,
+  });
 
   testUser = await new UserModel({
-    username: "testuser",
-    email: "test@example.com",
+    username: testUsername,
+    email: testEmail,
     password: "password123",
   }).save();
 
@@ -40,9 +54,18 @@ beforeEach(async () => {
 
 afterEach(async () => {
   if (testUser?._id) {
-    await MoodModel.deleteMany({ user: testUser._id });
-    await UserModel.deleteOne({ _id: testUser._id });
+    await MoodModel.deleteMany({
+      user: testUser._id,
+    });
+
+    await UserModel.deleteOne({
+      _id: testUser._id,
+    });
   }
+});
+
+afterAll(async () => {
+  await dbDisconnect();
 });
 
 describe("Mood Router", () => {
@@ -60,7 +83,10 @@ describe("Mood Router", () => {
     const response = await request(app)
       .post("/moods")
       .set("Authorization", `Bearer ${testToken}`)
-      .send({ value: 8, optional_text: "Great day" });
+      .send({
+        value: 8,
+        optional_text: "Great day",
+      });
 
     expect(response.status).toBe(201);
     expect(response.body.data.value).toBe(8);
@@ -80,7 +106,9 @@ describe("Mood Router", () => {
     const response = await request(app)
       .patch(`/moods/${testMood._id}`)
       .set("Authorization", `Bearer ${testToken}`)
-      .send({ value: 5 });
+      .send({
+        value: 5,
+      });
 
     expect(response.status).toBe(200);
     expect(response.body.data.value).toBe(5);
