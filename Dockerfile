@@ -1,3 +1,4 @@
+
 # Base image
 FROM node:26-alpine
 
@@ -14,11 +15,10 @@ RUN npm ci --omit=dev
 COPY src ./src
 
 # Configure application port
-ARG PORT=3000
-ENV PORT=${PORT}
+ENV PORT=8080
 
 # Document the port
-EXPOSE ${PORT}
+EXPOSE 8080
 
 # Run as non-root user
 USER node
