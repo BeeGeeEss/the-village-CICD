@@ -184,7 +184,7 @@ jobs:
 
     permissions:
       contents: read
-      packages: read
+      packages: write
       id-token: write
 
     uses: ./.github/workflows/deploy-cloud-run.yml
