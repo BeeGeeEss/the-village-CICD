@@ -1,514 +1,451 @@
+
 # Explanation of Application Architecture
 
-## Application Architecture
+## 1. Application Architecture
 
-The following diagram represents the existing architecture of The Village Wellness App backend before containerisation.
+The Village Wellness App uses a client-server architecture. A separate React frontend communicates with an Express.js and Node.js REST API, which processes requests and manages application data stored in MongoDB Atlas through Mongoose.
 
-```mermaid
-flowchart LR
-
-    %% CLIENTS
-
-    F["React Frontend<br/>(Separate Project)"]
-
-    I["Insomnia<br/>/ API Client"]
-
-
-    %% EXPRESS API
-
-    subgraph API["Express / Node.js REST API"]
-
-        S["Security Middleware<br/><br/>
-        • Helmet<br/>
-        • CORS<br/>
-        • JWT Authentication<br/>
-        • Authorisation"]
-
-        R["Routes & Controllers<br/><br/>
-        • Users<br/>
-        • Moods<br/>
-        • Pains<br/>
-        • Events"]
-
-        V["Validation &<br/>Error Handling"]
-
-        S --> R
-        R --> V
-
-    end
-
-
-    %% MONGOOSE MODELS
-
-    subgraph MODELS["Mongoose Models"]
-
-        UM["User Model"]
-        MM["Mood Model"]
-        PM["Pain Model"]
-        EM["Event Model"]
-
-    end
-
-
-    %% DATABASE
-
-    subgraph DB["MongoDB Atlas"]
-
-        D["Application Data<br/><br/>
-        • Users<br/>
-        • Moods<br/>
-        • Pains<br/>
-        • Events<br/>
-        • Hashed Passwords"]
-
-    end
-
-
-    %% DEVELOPMENT & TESTING
-
-    T["Development & Testing<br/><br/>
-    Jest + Supertest"]
-
-
-    %% ENVIRONMENT CONFIGURATION
-
-    E["Environment Configuration<br/><br/>
-    DATABASE_URL<br/>
-    JWT_SECRET_KEY<br/>
-    PORT<br/>
-    NODE_ENV"]
-
-
-    %% CONNECTIONS
-
-    F -->|"HTTP / JSON"| S
-    I -->|"HTTP / JSON"| S
-
-    V -->|"Uses"| UM
-    V -->|"Uses"| MM
-    V -->|"Uses"| PM
-    V -->|"Uses"| EM
-
-    UM -->|"Mongoose"| D
-    MM -->|"Mongoose"| D
-    PM -->|"Mongoose"| D
-    EM -->|"Mongoose"| D
-
-    T -.->|"Automated Tests"| API
-    E -.->|"Runtime Configuration"| API
-```
-
-The Village Wellness App uses client-server architecture, where a React front-end (seperate project) communicates with an Express.js/Node.js REST API. The backend processes HTTP requests, validates data, authenticates and authorises users, and connects to a MongoDB Atlas database, through Mongoose.
-
-### React
-
-The React frontend communicates with the backend via HTTP requests and JSON data. API clients such as Insomnia, can be used to communicate with data via the Express.js API, rather than the directly within the database. For example, when the container is running locally on port 3000, Insomnia can send a request to:
-
-`http://localhost:3000`
-
-This allows the API to be verified independently of the frontend.
-
-React is outside of the scope of the current project, but has been reflected in the architecture for context.
-
-### Express.js & Node.js
-
-The Express.js application takes a central role in processing - receiving requests from clients, validating data, applying authentication and security middleware, routing requests to controllers, and communicating with the database.
-
-#### API
-
-The backend is implemented using Node.js and Express.js.
-Express provides the HTTP server and routing framework used to expose RESTful endpoints for the application’s resources, including:
-
-- Users
-- Moods
-- Pains
-- Users
-
-The API follows a REST-style architecture where clients interact with resources through HTTP methods such as GET, POST, PUT and DELETE.
-
-#### Security
-
-The API has incorporated several middlware security components:
-
-- Helmet: To apply security-related HTTP headers to responses - to protect against common web app vulnerabilities
-- CORS: Provides browser-level cross-origin access controls
-- JSON Web Tokens (JWTs): The API can issue JWTs to the client, the client can send the token (in the form of a bearer token) in the authorization header of a HTTP request to verify authentication. JWTs are stored as JWT_SECRET_KEY environment variables, so that secrets are not being committed to Git repositories
-- Authorisation: Once the user is authenticated and can gain access to the application, authorisation is granted based on user roles i.e admin/basic user
-
-#### Routes & Controllers
-
-The application keeps each route seperate so that requests for moods are handled separately to requests related to pain.
-
-The backend has the following routes:
-
-- Users
-- Pains
-- Moods
-- Events
-
-The routing works alongside the authentication and authorisation middleware, ensuring that only registered users, with the appropriate role can access certain endpoints.
-
-#### Error Handling
-
-Mongoose schemas determine rules for how data is stored, and route-level validation ensures that requests have the appropriate information to be processed and stored.
-
-The API provides consistent HTTP error responses to ensure that sensitive information is not exposed. As well as ensuring the the client receives consistent messaging:
-
-- 400 — Bad Request
-- 401 — Unauthorised
-- 403 — Forbidden
-- 404 — Not Found
-- 500 — Internal Server Error
-
-#### Testing
-
-The project uses ESLint, Jest and Supertest to validate the backend application.
-
-ESLint is used for static code analysis and code-quality checking:
-
-`npm run lint`
-
-Jest and Supertest are used to test the Express.js API and application behaviour:
-
-`npm test`
-
-The test suite is organised into five test files covering the server and the major application routers:
-
-- server.test.js
-- userRouter.test.js
-- moodRouter.test.js
-- painRouter.test.js
-- eventRouter.test.js
-
-The current test suite contains 5 test suites and 19 automated tests.
-
-The tests use the application's database connection and environment configuration to test API behaviour, including user authentication, authorisation and the application's main resources.
-
-#### Environment Variables
-
-The application uses environment variables to separate configuration from application source code.
-
-The primary environment variables are:
-
-- DATABASE_URL — MongoDB Atlas connection string
-- JWT_SECRET_KEY — secret used for JWT operations
-- PORT — port used by the Express server
-- NODE_ENV — identifies the application environment
-
-For local development, these values can be supplied through a .env file. The .env file is excluded using .gitignore, an example.env file is included as a guide on what environment variables need to be added to a local copy of the project.
-
-### MongoDB Atlas
-
-MongoDB Atlas persists data and communicates with Express.js via mongoose - an object data modelling layer.
-
-The database stores application data including:
-
-- User records
-- Mood records
-- Pain records
-- Event records
-- Password hashes
-
-Mongoose provides schemas and models that allow the Node.js application to interact with MongoDB. The MongoDB Atlas database intentionally remains outside of the Docker container - to ensure that the container remains stateless in relation to persistent app data.
-
-The database is connected via environment variables `DATABASE_URL`, rather than being hardcoded to source code.
-
-There is a clear separation of concerns between Express.js/Node.js, React, and MongoDB Atlas, which ensures that each application has clear responsibilities and limited access.
-
-## Containerised Architecture
-
-The following diagram represents the architecture of The Village Wellness App backend after the Express.js application has been containerised using Docker for development. The container provides a consistent development environment through Docker compose, containing the Node.js runtime, application source code, and production dependencies. while MongoDB Atlas remains an external managed database.
-
-The containerised architecture builds upon the application architecture.
+The backend is the focus of this project. The React frontend is shown for architectural context but is maintained separately.
 
 ```mermaid
 flowchart TB
 
-    DEV["Developer"]
+    FRONTEND["React Frontend<br/>Separate Project"]
+    CLIENT["Insomnia / API Client"]
 
-    COMPOSE["Docker Compose<br/>compose.yaml"]
+    subgraph API["Express.js / Node.js REST API"]
+        SECURITY["Security Middleware<br/>Helmet<br/>CORS<br/>JWT Authentication<br/>Role-based Authorisation"]
+        ROUTES["Routes and Controllers<br/>Users<br/>Moods<br/>Pains<br/>Events"]
+        VALIDATION["Request Validation<br/>Business Logic<br/>Error Handling"]
 
-    subgraph CONT["Docker Container"]
-
-        API["Express / Node.js API<br/><br/>
-        Middleware<br/>
-        Routes & Controllers<br/>
-        Mongoose Models"]
-
+        SECURITY --> ROUTES
+        ROUTES --> VALIDATION
     end
 
-    ENV[".env<br/><br/>
-    DATABASE_URL<br/>
-    JWT_SECRET_KEY<br/>
-    PORT<br/>
-    NODE_ENV"]
+    subgraph MODELS["Mongoose Models"]
+        USER["User Model"]
+        MOOD["Mood Model"]
+        PAIN["Pain Model"]
+        EVENT["Event Model"]
+    end
+
+    DB[("MongoDB Atlas<br/>Users<br/>Moods<br/>Pains<br/>Events<br/>Password Hashes")]
+
+    TESTS["Development and Testing<br/>ESLint<br/>Jest<br/>Supertest"]
+
+    ENV["Environment Configuration<br/>DATABASE_URL<br/>JWT_SECRET_KEY<br/>PORT<br/>NODE_ENV"]
+
+    FRONTEND -->|"HTTP / JSON"| SECURITY
+    CLIENT -->|"HTTP / JSON"| SECURITY
+
+    VALIDATION --> USER
+    VALIDATION --> MOOD
+    VALIDATION --> PAIN
+    VALIDATION --> EVENT
+
+    USER --> DB
+    MOOD --> DB
+    PAIN --> DB
+    EVENT --> DB
+
+    TESTS -.-> API
+    ENV -.-> API
+```
+
+**Figure 1: Application Architecture**
+
+### 1.1 Client Layer
+
+The application has two client interfaces:
+
+- **React frontend:** A separate project that communicates with the backend through HTTP requests and JSON responses.
+- **Insomnia:** An API testing client used to send requests directly to the backend and verify application behaviour independently of the frontend.
+
+For local development, the API can be accessed through:
+
+`http://localhost:3000`
+
+The frontend is outside the scope of this containerisation and CI/CD project.
+
+### 1.2 Express.js and Node.js API
+
+The backend is implemented using Node.js and Express.js. Express provides the HTTP server and routing framework used to expose REST-style endpoints.
+
+The API manages four main application resources:
+
+- Users
+- Moods
+- Pains
+- Events
+
+Routes direct incoming requests to the appropriate controllers, which handle application logic and communicate with the relevant Mongoose models.
+
+### 1.3 Security
+
+The API incorporates several security mechanisms:
+
+- **Helmet:** Applies security-related HTTP headers.
+- **CORS:** Controls cross-origin access to the API.
+- **JWT authentication:** Uses JSON Web Tokens to verify authenticated requests.
+- **Role-based authorisation:** Restricts access to protected endpoints according to user roles.
+
+JWT signing uses the `JWT_SECRET_KEY` environment variable rather than a secret embedded in the source code.
+
+### 1.4 Validation and Error Handling
+
+Request validation and Mongoose schemas help ensure that application data is appropriately structured before it is stored.
+
+The API also returns HTTP error responses to communicate request and application errors consistently. These include:
+
+| Status | Purpose |
+| --- | --- |
+| `400` | Bad Request |
+| `401` | Unauthorised |
+| `403` | Forbidden |
+| `404` | Not Found |
+| `500` | Internal Server Error |
+
+### 1.5 Data Layer
+
+MongoDB Atlas provides managed persistent storage for the application.
+
+Mongoose provides the object data modelling layer between the Express application and MongoDB Atlas. The application uses separate models for Users, Moods, Pains and Events.
+
+User passwords are stored as password hashes rather than plain-text passwords.
+
+The database remains external to the application container. This keeps persistent application data separate from the container lifecycle.
+
+### 1.6 Testing and Configuration
+
+The project uses the following tools to validate application quality and behaviour:
+
+| Technology | Purpose |
+| --- | --- |
+| ESLint | Static code analysis and code-quality checks |
+| Jest | Automated testing framework |
+| Supertest | HTTP testing of Express endpoints |
+
+The main validation commands are:
+
+```bash
+npm run lint
+npm test
+```
+
+Application configuration is supplied through environment variables:
+
+| Variable | Purpose |
+| --- | --- |
+| `DATABASE_URL` | MongoDB Atlas connection string |
+| `JWT_SECRET_KEY` | Secret used for JWT operations |
+| `PORT` | Port used by the Express server |
+| `NODE_ENV` | Application environment |
+
+For local development, these values are supplied through a `.env` file. Sensitive configuration files are excluded from source control.
+
+---
+
+## 2. Containerised Architecture
+
+Docker is used to package the Express.js backend and its runtime dependencies into a container image.
+
+The containerised architecture builds on the existing application architecture. The API runs inside a Docker container, while MongoDB Atlas remains an external managed database.
+
+```mermaid
+flowchart TB
+
+    DEV["Developer<br/>WSL2 / Ubuntu"]
+
+    subgraph LOCAL["Local Development Environment"]
+        DOCKER["Docker Desktop"]
+        COMPOSE["Docker Compose<br/>compose.yaml"]
+
+        subgraph CONTAINER["Docker Container"]
+            API["The Village API<br/>Node.js 26<br/>Express.js<br/>Middleware<br/>Routes and Controllers<br/>Mongoose Models"]
+        end
+    end
+
+    ENV[".env Configuration<br/>DATABASE_URL<br/>JWT_SECRET_KEY<br/>PORT<br/>NODE_ENV"]
 
     CLIENT["Insomnia / API Client"]
 
-    DB["MongoDB Atlas<br/>External Database"]
+    DB[("MongoDB Atlas<br/>External Managed Database")]
 
-    DEV -->|"docker compose up"| COMPOSE
-    COMPOSE -->|"Build & run"| CONT
-    ENV -.->|"Runtime configuration"| CONT
+    DEV --> DOCKER
+    DOCKER --> COMPOSE
+    COMPOSE -->|"Build and run"| CONTAINER
+    ENV -.->|"Runtime configuration"| API
     CLIENT -->|"HTTP :3000"| API
-    API -->|"Mongoose"| DB
-
+    API -->|"Mongoose connection"| DB
 ```
 
-### Docker Containerisation
+**Figure 2: Containerised Application Architecture**
 
-Docker is used to package the Express.js backend application and its runtime dependencies into a portable container image.
+### 2.1 Docker Image
 
-The project uses a Dockerfile to define how the container image is constructed. The Dockerfile uses the official Node.js 26 Alpine image as its base:
+The project uses a Dockerfile to define how the backend container image is built.
 
-`FROM node:26-alpine`
+The image uses the official Node.js 26 Alpine base image:
 
-Alpine Linux provides a relatively lightweight Linux environment, helping to reduce the size of the container compared with larger general-purpose base images.
-
-The Dockerfile copies the package.json and package-lock.json files before installing dependencies:
-
-`COPY package*.json ./
-RUN npm ci --omit=dev`
-
-Copying the package files before the application source also ensures that if the application source changes but the dependencies remain unchanged, Docker can reuse the existing dependencies during subsequent builds.
-
-The --omit=dev option installs only the dependencies required to run the application. Development dependencies such as Jest and Supertest are therefore excluded from the production runtime image.
-
-The application source code is then copied into the image:
-
-`COPY src ./src`
-
-The Dockerfile configures NODE_ENV and PORT as configurable environment variables. The default NODE_ENV is development, while the default application port is 3000.
-
-The container exposes port 3000 by default:
-
-`EXPOSE ${PORT}`
-
-This allows the Express.js server to receive HTTP requests through the configured container port.
-
-The container also runs using the non-root node user:
-
-`USER node`
-
-Running the application as a non-root user provides an additional security measure by reducing the privileges available to the application process inside the container.
-
-Sensitive configuration is not stored in the Dockerfile. The .gitignore and .dockerignore files ensure this. Database credentials and authentication secrets are supplied to the container at runtime through environment variables.
-
-The resulting image therefore contains the application and its runtime dependencies without embedding environment-specific secrets.
-
-### Docker Development Environment
-
-Docker Desktop is used as the local Docker engine and integrates with the project's WSL2/Ubuntu development environment.
-
-Docker Compose is used to define the development container configuration through compose.yaml.
-
-The Compose configuration builds the application from the project's Dockerfile:
-
-```js
-build:
-  context: .
-  dockerfile: Dockerfile
+```dockerfile
+FROM node:26-alpine
 ```
 
-The development container can be built using:
+Alpine provides a lightweight Linux environment, helping to reduce the overall image size.
 
-`docker compose build`
+The Dockerfile copies the package files before installing dependencies:
 
-The container can then be started using:
-
-`docker compose up`
-
-The Compose configuration maps port 3000 on the host machine to port 3000 inside the container:
-
-```js
-ports: -"3000:3000";
+```dockerfile
+COPY package*.json ./
+RUN npm ci --omit=dev
 ```
 
-This allows API requests to be sent to the container through:
+This uses the package lock file to install reproducible dependencies. The `--omit=dev` option excludes development-only dependencies from the runtime image.
+
+The application source is then copied into the image:
+
+```dockerfile
+COPY src ./src
+```
+
+The Dockerfile configures the application port:
+
+```dockerfile
+ENV PORT=8080
+EXPOSE 8080
+```
+
+Port `8080` is the default runtime port used by the image, including for compatibility with Cloud Run. The local Docker Compose configuration overrides this value for local development.
+
+The container also runs using the non-root `node` user:
+
+```dockerfile
+USER node
+```
+
+Running the application as a non-root user reduces the privileges available to the application process inside the container.
+
+Sensitive configuration is not embedded in the image. Database credentials and authentication secrets are supplied at runtime through environment variables.
+
+### 2.2 Docker Compose
+
+Docker Compose defines the local development container configuration through `compose.yaml`.
+
+The configuration builds the application from the project's Dockerfile and maps the local development port:
+
+```yaml
+ports:
+  - "3000:3000"
+```
+
+It also supplies the local environment configuration:
+
+```yaml
+env_file:
+  - .env
+
+environment:
+  NODE_ENV: development
+  PORT: 3000
+```
+
+This overrides the Dockerfile's default port for local development.
+
+The container can be built and started using:
+
+```bash
+docker compose build
+docker compose up
+```
+
+The API is then available at:
 
 `http://localhost:3000`
 
-## CI/CD Architecture
+### 2.3 External Database
 
-The following diagram represents the continuous integration and continuous delivery (CI/CD) architecture used to automatically validate, build, tag, and publish the containerised backend application to GitHub Container Registry.
+MongoDB Atlas remains outside the Docker container.
 
-The CI/CD architecture builds on the previous application architecture and containerisation architecture.
+The application connects to the database through the `DATABASE_URL` environment variable. This separation ensures that persistent application data is not tied to the lifecycle of an individual container.
+
+The container can therefore be rebuilt or replaced without storing the application's persistent data inside the image.
+
+---
+
+## 3. CI/CD Architecture
+
+GitHub Actions automates application validation, Docker image building, image publishing and production deployment.
+
+GitHub Container Registry (GHCR) stores the published container images. GitHub Environments provides a manual approval checkpoint before the production deployment job can proceed.
 
 ```mermaid
 flowchart TB
 
-    %% DEVELOPER
+    DEV["Developer<br/>Code Changes"]
+    REPO["GitHub Repository<br/>BeeGeeEss / the-village-CICD"]
 
-    DEV["Developer"]
-
-    %% SOURCE CONTROL
-
-    REPO["GitHub Repository<br/><br/>
-    BeeGeeEss / the-village-cicd"]
-
-    %% CI/CD PIPELINE
-
-    subgraph ACTIONS["GitHub Actions CI/CD Pipeline"]
-
-        CHECKOUT["Checkout Code"]
-
-        INSTALL["Install Dependencies<br/><br/>
-        npm ci"]
-
-        LINT["Code Quality Check<br/><br/>
-        npm run lint"]
-
-        TEST["Automated Tests<br/><br/>
-        npm test"]
-
-        BUILD["Build Docker Image<br/><br/>
-        Docker Buildx"]
-
-        TAG["Tag Docker Image<br/><br/>
-        latest<br/>
-        development<br/>
-        1.0.0<br/>
-        development-1.0.0<br/>
-        sha-xxxxxxx"]
-
-        PUSH["Push Image"]
+    subgraph CI["Continuous Integration — GitHub Actions"]
+        CHECKOUT["Checkout Source Code"]
+        INSTALL["Install Dependencies<br/>npm ci"]
+        LINT["Code Quality<br/>npm run lint"]
+        TEST["Automated Tests<br/>Jest / Supertest"]
 
         CHECKOUT --> INSTALL
         INSTALL --> LINT
         LINT --> TEST
-        TEST --> BUILD
-        BUILD --> TAG
-        TAG --> PUSH
-
     end
 
-    %% CONTAINER REGISTRY
+    subgraph BUILD["Container Build and Publishing"]
+        DOCKER["Build Docker Image<br/>Docker Buildx"]
+        TAG["Generate Image Tags<br/>Version / Environment / Git SHA"]
+        PUSH["Publish Container Image"]
 
-    GHCR["GitHub Container Registry<br/><br/>
-    ghcr.io/beegeeess/<br/>
-    the-village-cicd"]
+        DOCKER --> TAG
+        TAG --> PUSH
+    end
 
-    %% RUNTIME
+    GHCR[("GitHub Container Registry<br/>GHCR")]
 
-    CONTAINER["Docker Container<br/><br/>
-    Express / Node.js API"]
+    subgraph DEPLOY["Production Deployment — GitHub Actions"]
+        APPROVAL{"GitHub Production<br/>Environment Approval"}
+        PROD["Production Deployment Job"]
 
-    %% RUNTIME CONFIGURATION
+        APPROVAL -->|"Approved"| PROD
+    end
 
-    SECRETS["Runtime Environment Variables<br/><br/>
-    DATABASE_URL<br/>
-    JWT_SECRET_KEY<br/>
-    PORT<br/>
-    NODE_ENV"]
+    subgraph CLOUD["Google Cloud Platform"]
+        RUN["Cloud Run<br/>Production Service"]
+        CONFIG["Runtime Configuration<br/>Environment Variables<br/>Database Credentials<br/>JWT Secret"]
+    end
 
-    %% DATABASE
+    DB[("MongoDB Atlas<br/>External Managed Database")]
 
-    DB["MongoDB Atlas<br/><br/>
-    External Managed Database"]
-
-    %% CONNECTIONS
-
-    DEV -->|"git push to main"| REPO
-
+    DEV -->|"Git push"| REPO
     REPO -->|"Workflow trigger"| CHECKOUT
-
-    PUSH -->|"Publish image"| GHCR
-
-    GHCR -->|"Pull image"| CONTAINER
-
-    SECRETS -.->|"Secure runtime configuration"| CONTAINER
-
-    CONTAINER -->|"Mongoose"| DB
+    TEST -->|"Checks pass"| DOCKER
+    PUSH --> GHCR
+    GHCR -->|"Published image digest"| APPROVAL
+    PROD -->|"Deploy same image digest"| RUN
+    CONFIG -.-> RUN
+    RUN -->|"Mongoose connection"| DB
 ```
 
-### CI/CD Build
+**Figure 3: CI/CD and Production Deployment Architecture**
 
-GitHub Actions is used to automate the validation, Docker image build and publishing process.
+### 3.1 Continuous Integration
 
-The workflow is triggered automatically when changes are pushed to the main branch.
+GitHub Actions automates the validation and container publishing process.
 
-The current workflow performs the following stages:
+The workflow performs the following activities:
 
-1. Checks out the repository using GitHub Actions.
-2. Sets up Node.js 26.
-3. Installs the project's dependencies using:
-   `npm ci`
-4. Runs ESLint using:
-   `npm run lint`
-5. Runs the Jest and Supertest automated test suite using:
-   `npm test`
-6. Sets up Docker Buildx for building the container image.
-7. Authenticates with GitHub Container Registry using the GitHub-provided GITHUB_TOKEN.
-8. Builds the Docker image using the project's Dockerfile.
-9. Publishes the resulting Docker image to GitHub Container Registry.
+1. Checks out the repository.
+2. Sets up the required Node.js environment.
+3. Installs dependencies using `npm ci`.
+4. Runs ESLint using `npm run lint`.
+5. Runs the automated test suite using `npm test`.
+6. Configures Docker Buildx.
+7. Authenticates with GitHub Container Registry.
+8. Builds the Docker image.
+9. Tags and publishes the image to GHCR.
 
-The workflow therefore creates an automated quality gate before the Docker image is published. The container image is not built and pushed if the application's linting or automated tests fail.
+Linting and automated tests act as quality gates. If these checks fail, the workflow does not proceed to the container image publishing stage.
 
-The workflow also uses GitHub Actions Secrets for sensitive configuration required by the automated tests. The MongoDB Atlas connection string and JWT secret are provided to the workflow through:
+### 3.2 Automated Testing
 
-`DATABASE_URL`
+Jest and Supertest are used to test the backend application and its HTTP endpoints.
 
-`JWT_SECRET_KEY`
+The tests execute within the GitHub Actions workflow before the Docker image is built and published.
 
-These values are stored as GitHub repository secrets rather than being committed to the repository.
+The workflow also receives the required test configuration through GitHub repository secrets, including:
 
-This separates application configuration and sensitive credentials from the application source code and Docker image.
+- `DATABASE_URL`
+- `JWT_SECRET_KEY`
 
-The successful execution of the workflow demonstrates that the application's automated validation and Docker image publishing process operates successfully.
+This allows the automated tests to access the required configuration without committing sensitive credentials to the repository.
 
-### Github Container Registry (GHCR)
+Development dependencies are excluded from the final runtime image through:
+
+```dockerfile
+RUN npm ci --omit=dev
+```
+
+This keeps testing tools separate from the production application dependencies.
+
+### 3.3 Container Image Publishing
 
 GitHub Container Registry stores the Docker images produced by the CI/CD workflow.
 
-The registry path is:
+The repository image is:
 
-`ghcr.io/beegeeess/the-village-cicd:(insert tag)`
+`ghcr.io/beegeeess/the-village-cicd`
 
-Using GHCR keeps the container images associated with the GitHub repository and its source-code history.
+The workflow applies image tags to identify published versions and commits. These include:
 
-The image tags allow a specific version or commit to be identified and deployed.
+| Tag | Purpose |
+| --- | --- |
+| `latest` | Most recently published image |
+| `development` | Development image reference |
+| `testing` | Testing image reference |
+| `1.0.0` | Application version |
+| `sha-xxxxxxx` | Specific Git commit |
 
-The projects tags are:
+Additional production-related tags can be used to identify the image selected for production deployment.
 
-- ghcr.io/beegeeess/the-village-cicd:latest
-- ghcr.io/beegeeess/the-village-cicd:development
-- ghcr.io/beegeeess/the-village-cicd:testing
-- ghcr.io/beegeeess/the-village-cicd:production
-- ghcr.io/beegeeess/the-village-cicd:${{ env.APP_VERSION }}
-- ghcr.io/beegeeess/the-village-cicd:production-${{ env.APP_VERSION }}
-- ghcr.io/beegeeess/the-village-cicd:sha-${{ env.SHORT_SHA }}
+Tags provide convenient references to images, while the image digest provides an immutable identifier for a specific image.
 
-The registry provides a central location from which the container image can be retrieved and run independently of the developer's local Docker environment.
+### 3.4 Production Deployment
 
-For example, the production image can be retrieved using:
+Production deployment is performed through Google Cloud Run.
 
-`docker pull ghcr.io/beegeeess/the-village-cicd:production`
+The production deployment job is protected by a GitHub Environment named `production`.
 
-The image can then be run locally with the required environment configuration supplied at runtime.
+The environment requires manual approval from an authorised reviewer before the deployment job can proceed.
 
-Using GHCR also separates the built container image from the source code repository. GitHub Actions is responsible for automatically building and publishing the image, while Docker can retrieve the published image when it is required.
+The deployment process is therefore separated into two stages:
 
-### Testing & Validation
+1. **Image publishing:** GitHub Actions validates the application, builds the Docker image and publishes it to GHCR.
+2. **Production deployment:** Following approval, the deployment job deploys the previously published image to Cloud Run.
 
-Testing is kept separate from the runtime container dependencies because the Dockerfile uses:
+Using the same published image digest for production deployment ensures that the image being deployed is the image that was built and published by the workflow, rather than a newly rebuilt image.
 
-RUN npm ci --omit=dev
+### 3.5 Runtime Configuration
 
-This prevents development-only dependencies such as Jest and Supertest from being unnecessarily included in the runtime image.
+Application configuration and secrets are supplied separately from the container image.
 
-GitHub Actions acts as a quality gate by running linting and automated tests before the Docker image is built and published.
+The production service requires the appropriate runtime configuration, including:
 
-## Architecture Justification
+- `DATABASE_URL`
+- `JWT_SECRET_KEY`
+- `PORT`
+- `NODE_ENV`
 
-The architecture was selected because it provides separation of responsibilities, portability, security and maintainability.
+The application connects to MongoDB Atlas through the configured database connection string.
 
-Express.js provides a lightweight framework for implementing the REST API, while MongoDB Atlas provides managed persistent storage. Mongoose provides a structured interface between the application and database.
+This approach keeps environment-specific configuration and sensitive credentials outside the container image.
 
-Docker provides consistency between development and deployment environments by packaging the application and its runtime dependencies into a reproducible image.
-GitHub Actions automates the image-building process, reducing manual deployment steps and providing a repeatable CI/CD workflow.
+---
 
-GHCR provides a central location for versioned container images and allows images to be identified using environment, application version and Git commit information.
+## 4. Architecture Justification
 
-Externalising MongoDB Atlas and application secrets means that the container remains portable and does not contain environment-specific credentials.
+The architecture was selected to support separation of responsibilities, portability, security, maintainability and repeatable deployment.
 
-This architecture supports reproducible development, automated builds, secure configuration and traceable container versions while maintaining a clear separation between the application, infrastructure and persistent data.
+| Technology | Architectural Purpose |
+| --- | --- |
+| React | Provides the separate frontend client |
+| Node.js and Express.js | Provide the backend REST API |
+| Mongoose | Provides the data modelling layer |
+| MongoDB Atlas | Provides managed persistent storage |
+| Docker | Packages the application and runtime dependencies |
+| Docker Compose | Defines the local development container |
+| GitHub Actions | Automates validation, image building and publishing |
+| GitHub Container Registry | Stores versioned container images |
+| GitHub Environments | Provides controlled production deployment approval |
+| Google Cloud Run | Provides the production container runtime |
+
+Containerisation provides a consistent and portable application runtime. Separating the database and runtime configuration from the image allows the application container to be replaced without embedding persistent data or environment-specific secrets.
+
+Automated linting and testing provide a quality gate before image publishing. GHCR provides a central location for versioned images, while image digests support traceability between the published image and the production deployment.
+
+Finally, GitHub Environment protection introduces a human approval checkpoint before production deployment. This provides additional control over changes entering the production environment.
+
+Together, these architectural decisions establish a repeatable container build and deployment process while keeping the application, persistent data, configuration and deployment responsibilities clearly separated.

@@ -73,205 +73,161 @@ The application also allows users to add event markers to their timeline, such a
 
 ## Application Architecture
 
-The following diagram represents the existing architecture of The Village Wellness App backend before containerisation.
+The Village Wellness App uses a client-server architecture. A separately maintained React frontend communicates with the Express.js/Node.js REST API through HTTP requests and JSON responses. API clients such as Insomnia can also interact directly with the backend for development and testing.
+
+The backend is responsible for request handling, authentication, authorisation, validation, business logic and database communication. MongoDB Atlas provides persistent data storage through Mongoose.
 
 ```mermaid
 flowchart LR
-
-    F["React Frontend<br/>(Separate Project)"]
-
-    I["Insomnia<br/>/ API Client"]
-
-    subgraph API["Express / Node.js REST API"]
-
-        S["Security Middleware<br/><br/>
-        • Helmet<br/>
-        • CORS<br/>
-        • JWT Authentication<br/>
-        • Authorisation"]
-
-        R["Routes & Controllers<br/><br/>
-        • Users<br/>
-        • Moods<br/>
-        • Pains<br/>
-        • Events"]
-
-        V["Validation &<br/>Error Handling"]
-
-        S --> R
-        R --> V
-
+    subgraph CLIENTS["Client Applications"]
+        REACT["React Frontend<br/>(Separate Repository)"]
+        INSOMNIA["Insomnia<br/>API Testing"]
     end
 
-    subgraph MODELS["Mongoose Models"]
+    subgraph API["Express.js / Node.js REST API"]
+        SECURITY["Security Middleware<br/>Helmet<br/>CORS<br/>JWT Authentication<br/>Role-based Authorisation"]
 
-        UM["User Model"]
-        MM["Mood Model"]
-        PM["Pain Model"]
-        EM["Event Model"]
+        ROUTES["Routes & Controllers<br/>Users<br/>Moods<br/>Pains<br/>Events"]
 
+        VALIDATION["Request Validation<br/>Business Logic<br/>Error Handling"]
+
+        SECURITY --> ROUTES
+        ROUTES --> VALIDATION
     end
 
-    subgraph DB["MongoDB Atlas"]
-
-        D["Application Data<br/><br/>
-        • Users<br/>
-        • Moods<br/>
-        • Pains<br/>
-        • Events<br/>
-        • Hashed Passwords"]
-
+    subgraph DATA["Data Access Layer"]
+        MODELS["Mongoose Models<br/>User<br/>Mood<br/>Pain<br/>Event"]
     end
 
-    T["Development & Testing<br/><br/>
-    Jest + Supertest"]
+    DB[("MongoDB Atlas<br/>Persistent Application Data")]
 
-    E["Environment Configuration<br/><br/>
-    DATABASE_URL<br/>
-    JWT_SECRET_KEY<br/>
-    PORT<br/>
-    NODE_ENV"]
+    REACT -->|"HTTP / JSON"| SECURITY
+    INSOMNIA -->|"HTTP / JSON"| SECURITY
+    VALIDATION --> MODELS
+    MODELS -->|"Mongoose"| DB
 
-    F -->|"HTTP / JSON"| S
-    I -->|"HTTP / JSON"| S
+    TESTS["Automated Testing<br/>ESLint / Jest / Supertest"]
+    CONFIG["Environment Configuration<br/>DATABASE_URL<br/>JWT_SECRET_KEY<br/>PORT<br/>NODE_ENV"]
 
-    V -->|"Uses"| UM
-    V -->|"Uses"| MM
-    V -->|"Uses"| PM
-    V -->|"Uses"| EM
-
-    UM -->|"Mongoose"| D
-    MM -->|"Mongoose"| D
-    PM -->|"Mongoose"| D
-    EM -->|"Mongoose"| D
-
-    T -.->|"Automated Tests"| API
-    E -.->|"Runtime Configuration"| API
+    TESTS -.-> API
+    CONFIG -.-> API
 ```
 
-**Figure 1: Existing Application Architecture**
+*Figure 1: Existing Application Architecture*
+
+The architecture separates client applications, API processing, data access and persistent storage. This allows the backend to operate independently of the frontend while maintaining a consistent interface for application clients.
 
 ## Containerised Architecture
 
-The following diagram represents the architecture of The Village Wellness App backend after the Express.js application has been containerised using Docker for development. Docker Compose manages the development container, while MongoDB Atlas remains an external managed database.
+The following diagram represents the backend application running in a Docker container for local development. Docker Compose builds and manages the container, while Docker Desktop provides the Docker engine within the WSL2 development environment.
+
+The Express.js application and its production dependencies run inside the container. MongoDB Atlas remains an external managed database, with connection details supplied through environment variables.
 
 ```mermaid
 flowchart TB
 
-    DEV["Developer"]
+    DEV["Developer<br/>WSL2 / Ubuntu"]
 
-    COMPOSE["Docker Compose<br/>compose.yaml"]
+    subgraph DOCKER["Docker Desktop"]
+        COMPOSE["Docker Compose<br/>compose.yaml"]
 
-    subgraph CONT["Docker Container"]
+        subgraph CONT["Docker Container<br/>the-village-api"]
+            API["Node.js / Express API<br/><br/>
+            Middleware<br/>
+            Routes & Controllers<br/>
+            Mongoose Models"]
+        end
 
-        API["Express / Node.js API<br/><br/>
-        Middleware<br/>
-        Routes & Controllers<br/>
-        Mongoose Models"]
-
+        DOCKERFILE["Dockerfile<br/>node:26-alpine<br/>Production Dependencies<br/>Non-root User"]
     end
 
     ENV[".env<br/><br/>
     DATABASE_URL<br/>
-    JWT_SECRET_KEY<br/>
-    PORT<br/>
-    NODE_ENV"]
+    JWT_SECRET_KEY"]
 
-    CLIENT["Insomnia / API Client"]
+    CLIENT["Insomnia<br/>API Client"]
 
-    DB["MongoDB Atlas<br/>External Database"]
+    DB[("MongoDB Atlas<br/>External Managed Database")]
 
     DEV -->|"docker compose up"| COMPOSE
-    COMPOSE -->|"Build & run"| CONT
-    ENV -.->|"Runtime configuration"| CONT
+    DOCKERFILE -->|"Build Image"| COMPOSE
+    COMPOSE -->|"Start Container"| API
+
+    ENV -.->|"Runtime Configuration"| COMPOSE
+
     CLIENT -->|"HTTP :3000"| API
-    API -->|"Mongoose"| DB
+    API -->|"Mongoose Connection"| DB
+
 ```
 
 **Figure 2: Containerised Development Architecture**
 
+Docker provides a consistent application runtime by packaging the backend and its production dependencies into an isolated container. Docker Compose simplifies local container management, while environment variables allow configuration to be supplied independently of the application image.
+
+MongoDB Atlas remains external to the container, ensuring application data persists independently of the container lifecycle.
+
+
 ## CI/CD Architecture
 
-The following diagram represents the continuous integration and continuous delivery (CI/CD) architecture used to automatically validate, build, tag, publish and deploy the containerised backend application.
+The CI/CD pipeline automates application validation, container image publishing and production deployment. GitHub Actions executes the workflow, while GitHub Container Registry (GHCR) stores the versioned Docker images.
 
-GitHub Actions performs code-quality checks and automated testing before building the Docker image.
-
-The resulting image is published to GitHub Container Registry. The deployment workflow then uses Google Cloud Workload Identity Federation to authenticate with Google Cloud and deploy the image to Cloud Run.
-
-Runtime environment variables and secrets are supplied separately and are not stored in the Docker image.
+The deployment process separates image publishing from production deployment. GitHub Environments provides a manual approval checkpoint before the production deployment can proceed.
 
 ```mermaid
 flowchart TB
 
-    DEV["Developer"]
+    DEV["Developer<br/>Code Changes"]
+    REPO["GitHub Repository<br/>BeeGeeEss / the-village-CICD"]
 
-    REPO["GitHub Repository<br/><br/>
-    BeeGeeEss / the-village-cicd"]
-
-    subgraph ACTIONS["GitHub Actions CI/CD Pipeline"]
-
-        CHECKOUT["Checkout Code"]
-        INSTALL["Install Dependencies<br/><br/>npm ci"]
-        LINT["Code Quality Check<br/><br/>npm run lint"]
-        TEST["Automated Tests<br/><br/>Jest"]
-        BUILD["Build Docker Image<br/><br/>Docker Buildx"]
-        TAG["Tag Docker Image<br/><br/>Version and Git SHA"]
-        PUSH["Publish Image to GHCR"]
+    subgraph CI["Continuous Integration — GitHub Actions"]
+        CHECKOUT["Checkout Source Code"]
+        INSTALL["Install Dependencies<br/>npm ci"]
+        LINT["Code Quality<br/>npm run lint"]
+        TEST["Automated Tests<br/>Jest / Supertest"]
 
         CHECKOUT --> INSTALL
         INSTALL --> LINT
         LINT --> TEST
-        TEST --> BUILD
-        BUILD --> TAG
+    end
+
+    subgraph BUILD["Container Build & Publishing"]
+        DOCKER["Build Docker Image<br/>Docker Buildx"]
+        TAG["Generate Image Tags<br/>Version / Environment / Git SHA"]
+        PUSH["Publish Container Image"]
+
+        DOCKER --> TAG
         TAG --> PUSH
-
     end
 
-    GHCR["GitHub Container Registry<br/><br/>
-    ghcr.io/beegeeess/<br/>the-village-cicd"]
+    GHCR[("GitHub Container Registry<br/>GHCR")]
 
-    APPROVAL["GitHub Environment<br/><br/>
-    Production Approval"]
+    subgraph DEPLOY["Production Deployment — GitHub Actions"]
+        APPROVAL{"GitHub Production<br/>Environment Approval"}
+        PROD["Production Deployment Job"]
 
-    OIDC["Workload Identity Federation<br/><br/>
-    OIDC Authentication"]
-
-    subgraph GCP["Google Cloud"]
-
-        CLOUDRUN["Google Cloud Run<br/><br/>
-        the-village-api-production"]
-
-        SECRET["Secret Manager<br/><br/>
-        DATABASE_URL<br/>
-        JWT_SECRET_KEY"]
-
-        HEALTH["HTTP Health Check<br/><br/>
-        /health"]
-
+        APPROVAL -->|"Approved"| PROD
     end
 
-    DB["MongoDB Atlas<br/><br/>
-    External Managed Database"]
+    subgraph CLOUD["Google Cloud Platform"]
+        RUN["Cloud Run<br/>Production Service"]
+        CONFIG["Runtime Configuration<br/>Environment Variables<br/>Database Credentials<br/>JWT Secret"]
+    end
 
-    PROMOTE["Promote Verified Image Digest<br/><br/>
-    production<br/>
-    production-version"]
+    DB[("MongoDB Atlas<br/>External Managed Database")]
 
-    DEV -->|"Push to main"| REPO
+    DEV -->|"Git push"| REPO
     REPO -->|"Workflow trigger"| CHECKOUT
-    PUSH -->|"Publish image"| GHCR
-    GHCR -->|"Image digest"| APPROVAL
-    APPROVAL --> OIDC
-    OIDC --> CLOUDRUN
-    GHCR -->|"Deploy exact image digest"| CLOUDRUN
-    SECRET -.->|"Runtime secrets"| CLOUDRUN
-    CLOUDRUN -->|"Mongoose"| DB
-    CLOUDRUN --> HEALTH
-    HEALTH -->|"Successful verification"| PROMOTE
-    PROMOTE --> GHCR
+    TEST -->|"Checks pass"| DOCKER
+    PUSH --> GHCR
+    GHCR -->|"Published image digest"| APPROVAL
+    PROD -->|"Deploy same image digest"| RUN
+    CONFIG -.-> RUN
+    RUN -->|"Mongoose connection"| DB
 ```
 
-**Figure 3: CI/CD Architecture**
+**Figure 3: Continuous Integration and Production Deployment Architecture**
+
+The pipeline automates code validation, container image building and publishing before production deployment. GitHub Environment protection introduces a manual approval checkpoint, requiring an authorised reviewer to approve the production deployment. The approved deployment uses the previously published container image, ensuring the validated image is promoted without rebuilding.
 
 ## Project Features
 
