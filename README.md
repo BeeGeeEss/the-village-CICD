@@ -13,6 +13,7 @@
 - [Application Architecture](#application-architecture)
 - [Containerised Architecture](#containerised-architecture)
 - [CI/CD Architecture](#cicd-architecture)
+- [Implementation Evidence](#implementation-evidence)
 - [Project Features](#project-features)
 - [Tech Stack](#tech-stack)
 - [Packages](#packages)
@@ -166,68 +167,174 @@ Docker provides a consistent application runtime by packaging the backend and it
 
 MongoDB Atlas remains external to the container, ensuring application data persists independently of the container lifecycle.
 
-
 ## CI/CD Architecture
 
-The CI/CD pipeline automates application validation, container image publishing and production deployment. GitHub Actions executes the workflow, while GitHub Container Registry (GHCR) stores the versioned Docker images.
+The CI/CD pipeline automates application validation, Docker image building, container publishing and production deployment using GitHub Actions.
 
-The deployment process separates image publishing from production deployment. GitHub Environments provides a manual approval checkpoint before the production deployment can proceed.
+The implementation uses two workflow files:
+
+- `backend-ci.yml`: Coordinates application validation, container building, image publishing and production deployment.
+- `deploy-cloud-run.yml`: A reusable workflow that handles Google Cloud authentication, Cloud Run deployment, health verification and production image promotion.
+
+### Workflow Triggers
+
+The main workflow supports three triggers:
+
+- **Pull requests targeting `main`:** Run application validation only.
+- **Pushes to `main`:** Run validation, build and publish the container image, then initiate production deployment.
+- **Manual dispatch:** Allows the workflow to be started manually. Container publishing and production deployment only proceed when the run targets `main`.
+
+### CI/CD Pipeline
 
 ```mermaid
 flowchart TB
 
-    DEV["Developer<br/>Code Changes"]
-    REPO["GitHub Repository<br/>BeeGeeEss / the-village-CICD"]
+    DEV["Developer"]
 
-    subgraph CI["Continuous Integration — GitHub Actions"]
-        CHECKOUT["Checkout Source Code"]
-        INSTALL["Install Dependencies<br/>npm ci"]
-        LINT["Code Quality<br/>npm run lint"]
-        TEST["Automated Tests<br/>Jest / Supertest"]
+    subgraph MAIN["backend-ci.yml — Main Workflow"]
+        TRIGGER["Workflow Trigger<br/>Pull Request / Push / Manual Dispatch"]
 
-        CHECKOUT --> INSTALL
-        INSTALL --> LINT
-        LINT --> TEST
+        VALIDATE["validate<br/>Checkout Repository<br/>Node.js 26<br/>npm ci<br/>ESLint<br/>Jest / Supertest"]
+
+        TESTART["Validation Artefacts<br/>Logs and Jest Results<br/>30-day Retention"]
+
+        CONDITION{"Not a Pull Request<br/>and Branch is main?"}
+
+        BUILD["build_container<br/>Docker Buildx<br/>Build and Publish Image"]
+
+        METADATA["Build Metadata<br/>Application Version<br/>Git SHA<br/>Image Digest"]
+
+        REUSABLE["deploy_production<br/>Call Reusable Workflow<br/>Pass Image Digest and Metadata"]
+
+        TRIGGER --> VALIDATE
+        VALIDATE --> CONDITION
+        VALIDATE --> TESTART
+        CONDITION -->|"Yes"| BUILD
+        CONDITION -->|"No"| END["Validation Complete"]
+        BUILD --> METADATA
+        BUILD --> REUSABLE
     end
 
-    subgraph BUILD["Container Build & Publishing"]
-        DOCKER["Build Docker Image<br/>Docker Buildx"]
-        TAG["Generate Image Tags<br/>Version / Environment / Git SHA"]
-        PUSH["Publish Container Image"]
+    GHCR[("GitHub Container Registry<br/>ghcr.io/beegeeess/the-village-cicd")]
 
-        DOCKER --> TAG
-        TAG --> PUSH
+    subgraph REUSE["deploy-cloud-run.yml — Reusable Workflow"]
+        APPROVAL["production<br/>GitHub Environment Approval"]
+
+        AUTH["Google Cloud Authentication<br/>Workload Identity Federation"]
+
+        DEPLOY["Deploy Exact Image Digest<br/>Google Cloud Run"]
+
+        REVISION["Retrieve Cloud Run Revision<br/>and Service URL"]
+
+        HEALTH["HTTP Health Check<br/>/health<br/>Retry up to 12 Attempts"]
+
+        PROMOTE["Promote Verified Image<br/>production<br/>production-version"]
+
+        DEPLOYMETA["Deployment Metadata<br/>Revision, URL, Digest<br/>and Application Version"]
+
+        APPROVAL --> AUTH
+        AUTH --> DEPLOY
+        DEPLOY --> REVISION
+        REVISION --> HEALTH
+        HEALTH -->|"Successful"| PROMOTE
+        HEALTH --> DEPLOYMETA
     end
 
-    GHCR[("GitHub Container Registry<br/>GHCR")]
-
-    subgraph DEPLOY["Production Deployment — GitHub Actions"]
-        APPROVAL{"GitHub Production<br/>Environment Approval"}
-        PROD["Production Deployment Job"]
-
-        APPROVAL -->|"Approved"| PROD
-    end
-
-    subgraph CLOUD["Google Cloud Platform"]
-        RUN["Cloud Run<br/>Production Service"]
-        CONFIG["Runtime Configuration<br/>Environment Variables<br/>Database Credentials<br/>JWT Secret"]
+    subgraph GCP["Google Cloud Platform"]
+        CLOUDRUN["Cloud Run<br/>Production Service"]
+        SECRETS["Secret Manager<br/>DATABASE_URL<br/>JWT_SECRET_KEY"]
     end
 
     DB[("MongoDB Atlas<br/>External Managed Database")]
 
-    DEV -->|"Git push"| REPO
-    REPO -->|"Workflow trigger"| CHECKOUT
-    TEST -->|"Checks pass"| DOCKER
-    PUSH --> GHCR
-    GHCR -->|"Published image digest"| APPROVAL
-    PROD -->|"Deploy same image digest"| RUN
-    CONFIG -.-> RUN
-    RUN -->|"Mongoose connection"| DB
+    DEV --> TRIGGER
+    BUILD --> GHCR
+    REUSABLE --> APPROVAL
+    GHCR -->|"Published Image Digest"| DEPLOY
+    DEPLOY --> CLOUDRUN
+    SECRETS -.->|"Runtime Secrets"| CLOUDRUN
+    CLOUDRUN -->|"Mongoose Connection"| DB
+    PROMOTE --> GHCR
 ```
 
-**Figure 3: Continuous Integration and Production Deployment Architecture**
+**Figure 3: GitHub Actions CI/CD and Production Deployment Architecture**
 
-The pipeline automates code validation, container image building and publishing before production deployment. GitHub Environment protection introduces a manual approval checkpoint, requiring an authorised reviewer to approve the production deployment. The approved deployment uses the previously published container image, ensuring the validated image is promoted without rebuilding.
+### Continuous Integration
+
+The `validate` job runs for all workflow triggers. It checks out the repository, configures Node.js 26, installs dependencies using `npm ci`, and executes ESLint and the Jest/Supertest automated test suite.
+
+The test job receives its database connection and JWT configuration through GitHub repository secrets:
+
+- `TEST_DATABASE_URL`
+- `JWT_SECRET_KEY`
+
+Validation logs and Jest results are uploaded as GitHub Actions artefacts, with a retention period of 30 days.
+
+### Container Build and Publishing
+
+The `build_container` job depends on successful validation and only runs for non-pull-request events targeting `main`.
+
+Docker Buildx builds and publishes the container image to GitHub Container Registry (GHCR):
+
+`ghcr.io/beegeeess/the-village-cicd`
+
+The initial image tags identify the latest build, development and testing references, application version and Git commit.
+
+The job also records the application version, commit SHA and immutable image digest. These outputs are passed to the production deployment job.
+
+### Reusable Production Deployment
+
+The `deploy_production` job calls the existing `deploy-cloud-run.yml` reusable workflow. It passes the published image digest, application version, short Git SHA and Cloud Run service name.
+
+The reusable workflow uses the GitHub `production` Environment, which requires authorised manual approval before its deployment job proceeds.
+
+After approval, Google Cloud authentication is established through Workload Identity Federation (WIF), allowing GitHub Actions to authenticate without storing a long-lived service account key.
+
+### Cloud Run Deployment and Verification
+
+The reusable workflow deploys the exact published image digest to the production Cloud Run service.
+
+Runtime secrets are retrieved from Google Cloud Secret Manager:
+
+- `DATABASE_URL`
+- `JWT_SECRET_KEY`
+
+Following deployment, the workflow retrieves the Cloud Run revision and service URL. It then performs an HTTP health check against `/health`, retrying up to 12 times with a five-second interval between unsuccessful attempts.
+
+Only after successful health verification does the workflow promote the deployed image digest to the production tags:
+
+- `production`
+- `production-{application-version}`
+
+Deployment metadata, including the application version, Git commit, image digest, Cloud Run revision and service URL, is recorded and uploaded as a GitHub Actions artefact with a 30-day retention period.
+
+## Implementation Evidence
+
+The following screenshots demonstrate the implemented CI/CD pipeline, container image publishing and protected production deployment.
+
+### GitHub Actions Workflow
+
+The successful workflow execution demonstrates automated validation, container image building and production deployment.
+
+![Successful GitHub Actions workflow](docs/images/github-actions-success.png)
+
+### GitHub Container Registry
+
+The published container image and associated tags demonstrate successful image storage and version identification in GHCR.
+
+![Published container images in GHCR](docs/images/ghcr-container-images.png)
+
+### Production Environment Protection
+
+The GitHub production environment demonstrates the manual approval requirement configured to protect production deployments.
+
+![GitHub production environment protection](docs/images/production-environment.png)
+
+### Google Cloud Run Deployment
+
+The Cloud Run deployment demonstrates that the container image was deployed to the production service and passed the deployment health verification.
+
+![Successful Google Cloud Run deployment](docs/images/cloud-run-deployment.png)
 
 ## Project Features
 
@@ -658,13 +765,13 @@ The development container can then be started using:
 docker compose up
 ```
 
-The Compose configuration loads environment variables from the local `.env` file at runtime. This ensures that sensitive configuration such as the MongoDB connection string and JWT secret are not stored in the GitHub repository or included in the Docker image.
+The Compose configuration loads environment variables from the local `.env` file at runtime. Sensitive configuration, including the MongoDB connection string and JWT secret, is therefore kept outside the Docker image and excluded from source control.
+
+The Dockerfile defaults to port `8080`, which is compatible with Google Cloud Run. For local development, Docker Compose overrides this setting with `PORT=3000` and maps host port `3000` to container port `3000`.
 
 The application is available at:
 
 `http://localhost:3000`
-
-Port 3000 on the host machine is mapped to port 3000 inside the container.
 
 MongoDB is not containerised as part of this project. The application connects to MongoDB Atlas as an external managed database using the `DATABASE_URL` environment variable.
 
@@ -717,32 +824,30 @@ API requests can then be sent using an API client such as Insomnia.
 
 Docker images are published to GitHub Container Registry (GHCR).
 
-**Registry:**
+**Registry:** `ghcr.io/beegeeess/the-village-cicd`
 
-`ghcr.io/beegeeess/the-village-cicd`
-
-The build workflow creates the following tags:
+The build workflow publishes the image using the following tags:
 
 | Tag | Purpose |
 | --- | --- |
 | `latest` | Most recently published image |
 | `development` | Development image reference |
 | `testing` | Testing image reference |
-| `1.0.0` | Application version |
-| `sha-xxxxxxx` | Specific Git commit |
+| `{version}` | Application version derived from `package.json` |
+| `sha-{short-sha}` | Identifies the Git commit used to build the image |
 
-The build tags identify the image produced by the main-branch build. They do not represent separate deployed development and testing environments.
+These tags identify the image produced by the main-branch build. They do not represent separate deployed development or testing environments.
 
-Following successful production deployment and health verification, the deployment workflow promotes the same image digest to:
+Following a successful production deployment and health verification, the deployment workflow promotes the same image digest using these additional tags:
 
 | Tag | Purpose |
 | --- | --- |
-| `production` | Production image reference |
-| `production-1.0.0` | Versioned production image |
+| `production` | Most recently verified production image |
+| `production-{version}` | Verified production image for a specific application version |
 
-The version examples above illustrate the tag format. The workflow obtains the actual application version from `package.json`.
+The version is obtained directly from `package.json`. For example, if the application version is `1.0.0`, the production tag becomes `production-1.0.0`.
 
-Using image digests ensures that production deployment uses the exact container image that passed the preceding build and publishing process.
+Using the image digest ensures that production deployment and the production tags reference the exact container image that was built and published earlier in the workflow.
 
 [View container images in GHCR](https://github.com/BeeGeeEss/the-village-cicd/pkgs/container/the-village-cicd)
 

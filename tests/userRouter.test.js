@@ -1,37 +1,43 @@
-
 require("dotenv").config();
+
 const request = require("supertest");
 const { app } = require("../src/server");
 const { UserModel } = require("../src/models/UserModel");
 const { generateJwt } = require("../src/utils/jwtUtils");
-const { dbConnect, dbDisconnect } = require("../src/utils/dbConnectionManager");
+const {
+  dbConnect,
+  dbDisconnect,
+} = require("../src/utils/dbConnectionManager");
 
 let testUser;
 let testToken;
+
+const testEmails = [
+  "user-router-test@example.com",
+  "user-router-new@example.com",
+  "user-router-other@example.com",
+];
 
 beforeAll(async () => {
   await dbConnect();
 });
 
-afterAll(async () => {
-  await dbDisconnect();
-});
-
 beforeEach(async () => {
-  // Remove leftover test users from previous runs
+  // Remove leftover records from previous test runs.
   await UserModel.deleteMany({
-    email: {
-      $in: [
-        "user@example.com",
-        "newuser@example.com",
-        "other@example.com",
-      ],
-    },
+    $or: [
+      { username: { $in: [
+        "user-router-testuser",
+        "user-router-newuser",
+        "user-router-otheruser",
+      ] } },
+      { email: { $in: testEmails } },
+    ],
   });
 
   testUser = await new UserModel({
-    username: "testuser",
-    email: "user@example.com",
+    username: "user-router-testuser",
+    email: "user-router-test@example.com",
     password: "password123",
   }).save();
 
@@ -39,16 +45,21 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  // Remove users created during the test
+  // Clean up only records belonging to this test suite.
   await UserModel.deleteMany({
-    email: {
-      $in: [
-        "user@example.com",
-        "newuser@example.com",
-        "other@example.com",
-      ],
-    },
+    $or: [
+      { username: { $in: [
+        "user-router-testuser",
+        "user-router-newuser",
+        "user-router-otheruser",
+      ] } },
+      { email: { $in: testEmails } },
+    ],
   });
+});
+
+afterAll(async () => {
+  await dbDisconnect();
 });
 
 describe("User Router", () => {
@@ -56,15 +67,15 @@ describe("User Router", () => {
     const response = await request(app)
       .post("/users/signup")
       .send({
-        username: "newuser",
-        email: "newuser@example.com",
+        username: "user-router-newuser",
+        email: "user-router-new@example.com",
         password: "securepass123",
       });
 
     expect(response.status).toBe(201);
     expect(response.body.message).toBe("Welcome");
-    expect(response.body.data.username).toBe("newuser");
-    expect(response.body.data.email).toBe("newuser@example.com");
+    expect(response.body.data.username).toBe("user-router-newuser");
+    expect(response.body.data.email).toBe("user-router-new@example.com");
     expect(response.body.result).toBeDefined();
   });
 
@@ -72,7 +83,7 @@ describe("User Router", () => {
     const response = await request(app)
       .post("/users/login")
       .send({
-        email: "user@example.com",
+        email: "user-router-test@example.com",
         password: "password123",
       });
 
@@ -92,7 +103,6 @@ describe("User Router", () => {
   });
 
   it("GET /users/admin/dashboard returns all users when authenticated as admin", async () => {
-    // Promote test user to admin
     testUser.isAdmin = true;
     await testUser.save();
 
@@ -107,14 +117,12 @@ describe("User Router", () => {
   });
 
   it("GET /users/ returns all users for admin", async () => {
-    // Create another user first
     await new UserModel({
-      username: "otheruser",
-      email: "other@example.com",
+      username: "user-router-otheruser",
+      email: "user-router-other@example.com",
       password: "password456",
     }).save();
 
-    // Promote test user to admin
     testUser.isAdmin = true;
     await testUser.save();
 
@@ -128,7 +136,7 @@ describe("User Router", () => {
     expect(Array.isArray(response.body.data)).toBe(true);
     expect(response.body.count).toBeGreaterThanOrEqual(2);
 
-    // Check that sensitive fields are excluded
+    // Check that sensitive fields are excluded.
     expect(response.body.data[0].password).toBeUndefined();
     expect(response.body.data[0].salt).toBeUndefined();
   });
