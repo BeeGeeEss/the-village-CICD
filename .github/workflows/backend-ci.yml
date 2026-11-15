@@ -55,7 +55,7 @@ jobs:
           set -o pipefail
           npm run lint 2>&1 | tee logs/eslint.log
 
-      - name: Run tests
+      - name: Run tests with coverage
         env:
           TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
           JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
@@ -63,7 +63,8 @@ jobs:
           NODE_ENV: test
         run: |
           set -o pipefail
-          npm test -- --runInBand --json \
+          npm run test:coverage -- \
+            --json \
             --outputFile=test-results/jest-results.json \
             2>&1 | tee logs/jest.log
 
@@ -75,6 +76,7 @@ jobs:
           path: |
             logs/
             test-results/
+            coverage/
           if-no-files-found: warn
           retention-days: 30
 

@@ -2,9 +2,11 @@
 
 ## 1. Application Architecture
 
-The Village Wellness App uses a client-server architecture. A separate React frontend communicates with an Express.js and Node.js REST API, which processes requests and manages application data stored in MongoDB Atlas through Mongoose.
+The Village Wellness App uses a client-server architecture. The React frontend communicates with a separately maintained Express.js and Node.js REST API, which processes requests and manages application data stored in MongoDB Atlas through Mongoose.
 
-The backend is the focus of this project. The React frontend is included for architectural context but is maintained separately.
+The frontend and backend are maintained in separate GitHub repositories and deployed independently. This document focuses on the backend architecture, containerisation and CI/CD implementation. The frontend README provides additional documentation about the frontend application, its technologies, structure, testing and deployment.
+
+For further information, refer to the [Frontend Repository README](https://github.com/The-Village-Wellness-App/village-frontend/blob/main/README.md).
 
 ```mermaid
 flowchart TB
@@ -56,7 +58,7 @@ flowchart TB
 
 The application has two client interfaces:
 
-- **React frontend:** A separate project that communicates with the backend through HTTP requests and JSON responses.
+- **React frontend:** A separately maintained application that communicates with the backend through HTTP requests and JSON responses. Refer to the [Frontend Repository README](https://github.com/The-Village-Wellness-App/village-frontend/blob/main/README.md) for frontend documentation.
 - **Insomnia:** An API testing client used to send requests directly to the backend and verify application behaviour independently of the frontend.
 
 For local development, the API can be accessed through:
@@ -65,7 +67,15 @@ For local development, the API can be accessed through:
 
 The frontend is outside the scope of this containerisation and CI/CD project.
 
-### 1.2 Express.js and Node.js API
+### 1.2 Frontend Architecture
+
+The React frontend is maintained in a separate GitHub repository and has its own development, testing and deployment processes.
+
+It communicates with the backend through the REST API but is not included in this repository's Docker image or backend CI/CD workflow.
+
+For further information about the frontend application, technologies, structure, testing and deployment, refer to the [Frontend Repository README](https://github.com/The-Village-Wellness-App/village-frontend/blob/main/README.md).
+
+### 1.3 Express.js and Node.js API
 
 The backend is implemented using Node.js and Express.js. Express provides the HTTP server and routing framework used to expose REST-style endpoints.
 
@@ -78,7 +88,7 @@ The API manages four main application resources:
 
 Routes direct incoming requests to the appropriate controllers, which handle application logic and communicate with the relevant Mongoose models.
 
-### 1.3 Security
+### 1.4 Security
 
 The API incorporates several security mechanisms:
 
@@ -89,7 +99,7 @@ The API incorporates several security mechanisms:
 
 JWT signing uses the `JWT_SECRET_KEY` environment variable rather than a secret embedded in the source code.
 
-### 1.4 Validation and Error Handling
+### 1.5 Validation and Error Handling
 
 Request validation and Mongoose schemas help ensure that application data is appropriately structured before it is stored.
 
@@ -103,7 +113,7 @@ The API also returns HTTP error responses to communicate request and application
 | `404` | Not Found |
 | `500` | Internal Server Error |
 
-### 1.5 Data Layer
+### 1.6 Data Layer
 
 MongoDB Atlas provides managed persistent storage for the application.
 
@@ -113,9 +123,11 @@ User passwords are stored as password hashes rather than plain-text passwords.
 
 The database remains external to the application container. This keeps persistent application data separate from the container lifecycle.
 
-### 1.6 Testing and Configuration
+### 1.7 Testing, Coverage and Configuration
 
-The project uses the following tools to validate application quality and behaviour:
+The backend uses automated testing and static code analysis to validate application quality and behaviour.
+
+The testing tools include:
 
 | Technology | Purpose |
 | --- | --- |
@@ -123,12 +135,48 @@ The project uses the following tools to validate application quality and behavio
 | Jest | Automated testing framework |
 | Supertest | HTTP testing of Express endpoints |
 
+The current test suite contains five test files covering:
+
+- Event routes and controllers.
+- Mood routes and controllers.
+- Pain routes and controllers.
+- User routes and authentication behaviour.
+- Server behaviour.
+
 The main validation commands are:
 
 ```bash
 npm run lint
 npm test
 ```
+
+To execute the test suite and generate coverage reports:
+
+```bash
+npm run test:coverage
+```
+
+Jest collects coverage across four metrics:
+
+| Metric | Description |
+| --- | --- |
+| Statements | Percentage of executable statements tested |
+| Branches | Percentage of conditional branches tested |
+| Functions | Percentage of functions tested |
+| Lines | Percentage of executable lines tested |
+
+The locally generated baseline on 15 November 2026 was:
+
+| Coverage Metric | Result |
+| --- | ---: |
+| Statements | 64.15% |
+| Branches | 43.28% |
+| Functions | 68.00% |
+| Lines | 64.65% |
+
+This baseline was generated from five passing test suites containing 19 passing tests. It provides a starting point for monitoring test coverage and identifying areas where additional tests may be beneficial.
+
+Jest generates terminal, HTML and LCOV coverage reports. The HTML report can be inspected locally at `coverage/index.html`.
 
 Application configuration is supplied through environment variables:
 
@@ -141,6 +189,8 @@ Application configuration is supplied through environment variables:
 | `NODE_ENV` | Identifies the application environment |
 
 For local development, configuration values are supplied through a `.env` file. Sensitive configuration files are excluded from source control.
+
+The coverage baseline represents a local test execution and should not be interpreted as a verified GitHub Actions result.
 
 ---
 
@@ -297,11 +347,11 @@ flowchart TB
     subgraph MAIN["backend-ci.yml"]
         TRIGGER["Workflow Triggers<br/>Pull Request to main<br/>Push to main<br/>Manual Dispatch"]
 
-        VALIDATE["validate Job<br/><br/>Checkout source code<br/>Node.js 26<br/>npm ci<br/>ESLint<br/>Jest / Supertest"]
+        VALIDATE["validate Job<br/><br/>Checkout source code<br/>Node.js 26<br/>npm ci<br/>ESLint<br/>Jest / Supertest<br/>Coverage Reporting"]
 
-        ARTIFACTS["Validation Artefacts<br/>Logs and test results<br/>30-day retention"]
+        ARTIFACTS["Validation Artefacts<br/><br/>Logs<br/>Jest JSON Results<br/>Coverage Reports<br/>30-day retention"]
 
-        CONDITION{"Eligible main-branch<br/>build and deployment?"}
+        CONDITION{"Validation successful<br/>and eligible main branch?"}
 
         BUILD["build_container Job<br/><br/>Docker Buildx<br/>Build container image"]
 
@@ -372,20 +422,41 @@ The `validate` job runs for all three triggers. It performs the following steps:
 2. Configures Node.js 26.
 3. Installs dependencies using `npm ci`.
 4. Runs ESLint using `npm run lint`.
-5. Runs the automated test suite using `npm test`.
-6. Uploads validation logs and test results as GitHub Actions artefacts, retained for 30 days.
+5. Runs the automated Jest and Supertest suite with coverage using `npm run test:coverage`.
+6. Generates a structured Jest JSON test-results report.
+7. Uploads validation logs, test results and available coverage reports as GitHub Actions artefacts.
 
 Linting and automated tests act as quality gates. If these checks fail, the dependent container build cannot proceed.
+
+Validation artefacts are retained for 30 days. The artefact upload step is configured to run even when validation fails, allowing available diagnostic output to be retained for troubleshooting.
 
 Container image building and production deployment are restricted to eligible runs targeting the `main` branch. Pull requests therefore validate changes without publishing or deploying a container image.
 
 Manual workflow dispatch also requires the run to target `main` before the build and deployment stages can proceed.
 
-### 3.2 Automated Testing
+### 3.2 Automated Testing and Coverage
 
 Jest and Supertest are used to test the backend application and its HTTP endpoints.
 
-The tests execute within the GitHub Actions workflow before the Docker image is built and published.
+The test suite currently contains five test files covering the event, mood, pain and user routes, as well as server behaviour.
+
+The tests execute within the GitHub Actions validation workflow before the Docker image is built and published.
+
+The validation job runs:
+
+```bash
+npm run lint
+npm run test:coverage
+```
+
+The coverage-enabled test command generates terminal, HTML and LCOV coverage reports. The GitHub Actions workflow also produces a structured Jest JSON test-results report using additional Jest command-line arguments.
+
+The validation process produces the following outputs:
+
+- **Terminal coverage summary:** Displays the overall coverage results after test execution.
+- **HTML coverage report:** Allows individual files, covered lines and uncovered lines to be inspected.
+- **LCOV report:** Provides coverage data in a format compatible with other coverage tools.
+- **Jest JSON test-results report:** Contains structured test execution results generated separately by the GitHub Actions workflow.
 
 The validation job receives its configuration through environment variables and GitHub repository secrets:
 
@@ -398,7 +469,9 @@ The validation job receives its configuration through environment variables and 
 
 The test database connection is kept separate from the application's runtime database configuration. This prevents automated tests from relying on the production database connection.
 
-Development dependencies are excluded from the final runtime image through:
+Validation logs, structured test results and available coverage reports are uploaded as GitHub Actions artefacts and retained for 30 days. This allows test execution and coverage information to be inspected after a workflow run.
+
+Development dependencies, including Jest and Supertest, are excluded from the final runtime image through:
 
 ```dockerfile
 RUN npm ci --omit=dev
@@ -406,13 +479,73 @@ RUN npm ci --omit=dev
 
 This keeps testing tools separate from the production application dependencies.
 
+```mermaid
+flowchart TB
+    DEV["Developer"]
+    REPO["GitHub Repository<br/>BeeGeeEss / the-village-CICD"]
+
+    subgraph CI["GitHub Actions - backend-ci.yml"]
+        TRIGGER["Workflow Trigger<br/>Pull Request to main<br/>Push to main<br/>Manual Dispatch"]
+
+        INSTALL["Install Dependencies<br/>Node.js 26<br/>npm ci"]
+
+        LINT["Code Quality Validation<br/>npm run lint<br/>ESLint"]
+
+        TEST["Automated Testing<br/>npm run test:coverage<br/>Jest + Supertest"]
+
+        SUITES["Five Test Suites<br/>Event Routes<br/>Mood Routes<br/>Pain Routes<br/>User Routes<br/>Server Behaviour"]
+
+        COVERAGE["Coverage Collection<br/>Statements<br/>Branches<br/>Functions<br/>Lines"]
+
+        REPORTS["Generated Reports<br/>Terminal Summary<br/>HTML Coverage Report<br/>LCOV Report<br/>Jest JSON Results"]
+
+        LOGS["Validation Logs<br/>Jest Execution Logs"]
+
+        ARTIFACTS["GitHub Actions Artefacts<br/>Logs<br/>Test Results<br/>Coverage Reports<br/>30-Day Retention"]
+
+        GATE{"Validation Successful?"}
+
+        TRIGGER --> INSTALL
+        INSTALL --> LINT
+        LINT --> TEST
+        TEST --> SUITES
+        SUITES --> COVERAGE
+        COVERAGE --> REPORTS
+        TEST --> LOGS
+        REPORTS --> ARTIFACTS
+        LOGS --> ARTIFACTS
+        ARTIFACTS --> GATE
+    end
+
+    BUILD["Container Build<br/>Docker Buildx"]
+    GHCR[("GitHub Container Registry<br/>GHCR")]
+
+    DEV --> REPO
+    REPO --> TRIGGER
+    GATE -->|"Yes"| BUILD
+    BUILD --> GHCR
+    GATE -->|"No - stop pipeline"| FAILED["Build and deployment blocked"]
+
+    classDef validation fill:#dcebf7,stroke:#527daA,color:#142b4a
+    classDef reporting fill:#e8e1f5,stroke:#8c52ff,color:#263f60
+    classDef success fill:#dcebdc,stroke:#54845b,color:#173b20
+    classDef failure fill:#f8dddd,stroke:#b94a48,color:#572020
+
+    class INSTALL,LINT,TEST,SUITES,COVERAGE validation
+    class REPORTS,LOGS,ARTIFACTS reporting
+    class BUILD,GHCR success
+    class FAILED failure
+```
+
+Figure 4: Automated Testing and Coverage Workflow
+
 ### 3.3 Container Image Building and Publishing
 
 Following successful validation, eligible runs targeting `main` proceed to the `build_container` job.
 
 Docker Buildx builds the container image using the repository's Dockerfile. GitHub Actions authenticates with GitHub Container Registry using the GitHub-provided `GITHUB_TOKEN` and publishes the image to:
 
-`ghcr.io/beegeeess/the-village-cicd`
+`ghcr.io/beegeess/the-village-cicd`
 
 The workflow generates the following image tags:
 
@@ -489,13 +622,13 @@ Published container images can be retrieved independently of the local developme
 For example, the verified production image can be pulled from GHCR using:
 
 ```bash
-docker pull ghcr.io/beegeeess/the-village-cicd:production
+docker pull ghcr.io/beegeess/the-village-cicd:production
 ```
 
 The image can also be run locally with the required runtime environment variables supplied separately:
 
 ```bash
-docker run --env-file .env.production -p 8080:8080 ghcr.io/beegeeess/the-village-cicd:production
+docker run --env-file .env.production -p 8080:8080 ghcr.io/beegeess/the-village-cicd:production
 ```
 
 The local environment file must contain the required runtime configuration, including `DATABASE_URL` and `JWT_SECRET_KEY`. It must not be committed to source control.

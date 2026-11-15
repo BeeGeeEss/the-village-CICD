@@ -5,6 +5,7 @@
   "main": "src/index.js",
   "scripts": {
     "test": "cross-env NODE_ENV=test jest --testTimeout=30000",
+    "test:coverage": "cross-env NODE_ENV=test jest --testTimeout=30000 --runInBand --coverage",
     "lint": "eslint .",
     "setup:env": "node ./src/utils/_dev/envSetup.js",
     "start": "node ./src/index.js",
@@ -12,7 +13,7 @@
     "db:seed": "node ./src/utils/_dev/dbSeed.js",
     "db:wipe": "node ./src/utils/_dev/dbWipe.js",
     "db:reset": "npm run db:wipe && npm run db:seed"
-  },
+},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/The-Village-Wellness-App/village-backend.git"
