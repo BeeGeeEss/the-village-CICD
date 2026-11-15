@@ -4,7 +4,7 @@
 
 The Village Wellness App uses a client-server architecture. The React frontend communicates with a separately maintained Express.js and Node.js REST API, which processes requests and manages application data stored in MongoDB Atlas through Mongoose.
 
-The frontend and backend are maintained in separate GitHub repositories and deployed independently. This document focuses on the backend architecture, containerisation and CI/CD implementation. The frontend README provides additional documentation about the frontend application, its technologies, structure, testing and deployment.
+The frontend and backend are maintained in separate GitHub repositories and deployed independently. This document focuses on the backend architecture, containerisation and CI/CD implementation. The frontend README provides additional documentation about the frontend application's technologies, structure, testing and deployment.
 
 For further information, refer to the [Frontend Repository README](https://github.com/The-Village-Wellness-App/village-frontend/blob/main/README.md).
 
@@ -64,8 +64,6 @@ The application has two client interfaces:
 For local development, the API can be accessed through:
 
 `http://localhost:3000`
-
-The frontend is outside the scope of this containerisation and CI/CD project.
 
 ### 1.2 Frontend Architecture
 
@@ -367,7 +365,7 @@ flowchart TB
         PUBLISH --> DEPLOYJOB
     end
 
-    GHCR[("GitHub Container Registry<br/>ghcr.io/beegeeess/the-village-cicd")]
+    GHCR[("GitHub Container Registry<br/>ghcr.io/beegeess/the-village-cicd")]
 
     subgraph REUSABLE["deploy-cloud-run.yml"]
         APPROVAL["GitHub production Environment<br/>Manual approval required"]
@@ -526,7 +524,7 @@ flowchart TB
     BUILD --> GHCR
     GATE -->|"No - stop pipeline"| FAILED["Build and deployment blocked"]
 
-    classDef validation fill:#dcebf7,stroke:#527daA,color:#142b4a
+    classDef validation fill:#dcebf7,stroke:#527daa,color:#142b4a
     classDef reporting fill:#e8e1f5,stroke:#8c52ff,color:#263f60
     classDef success fill:#dcebdc,stroke:#54845b,color:#173b20
     classDef failure fill:#f8dddd,stroke:#b94a48,color:#572020
@@ -537,7 +535,7 @@ flowchart TB
     class FAILED failure
 ```
 
-Figure 4: Automated Testing and Coverage Workflow
+**Figure 4: Automated Testing and Coverage Workflow**
 
 ### 3.3 Container Image Building and Publishing
 
@@ -637,31 +635,225 @@ This provides a way to inspect the production-tagged image independently of the 
 
 ---
 
-## 4. Architecture Justification
+## 4. Application Technology Selection and Justification
 
-The architecture was selected to support separation of responsibilities, portability, security, maintainability and repeatable deployment.
+The technologies used to develop The Village Wellness App were selected based on their suitability for the application's requirements, integration capabilities, maintainability, security and development complexity.
 
-| Technology | Architectural Purpose |
-| --- | --- |
-| React | Provides the separate frontend client |
-| Node.js and Express.js | Provide the backend REST API |
-| Mongoose | Provides the data modelling layer |
-| MongoDB Atlas | Provides managed persistent storage |
-| Docker | Packages the application and runtime dependencies |
-| Docker Compose | Defines the local development container |
-| GitHub Actions | Automates validation, image building and deployment |
-| GitHub Container Registry | Stores versioned container images |
-| GitHub Environments | Provides controlled production deployment approval |
-| Workload Identity Federation | Provides keyless authentication to Google Cloud |
-| Google Cloud Secret Manager | Manages sensitive runtime configuration |
-| Google Cloud Run | Provides the production container runtime |
+The application uses the MERN stack, comprising MongoDB, Express.js, React and Node.js. This combination provides a JavaScript-based development environment across the frontend and backend, with MongoDB providing document-oriented data storage.
 
-Containerisation provides a consistent and portable application runtime. Separating the database and runtime configuration from the image allows the application container to be replaced without embedding persistent data or environment-specific secrets.
+The selection was intended to provide a consistent development experience while supporting the application's client-server architecture and its requirements for data management, authentication and API communication.
 
-Automated linting and testing provide a quality gate before image publishing. GHCR provides a central location for versioned images, while immutable image digests support traceability between the published image and the production deployment.
+### 4.1 MERN Stack
 
-The reusable deployment workflow separates production deployment responsibilities from the main CI workflow without introducing unnecessary workflow complexity.
+The MERN stack was selected because it provides an integrated set of technologies for developing a full-stack web application.
 
-Finally, GitHub Environment protection introduces a human approval checkpoint before production deployment. Workload Identity Federation and Google Cloud Secret Manager further strengthen the handling of cloud authentication and application secrets.
+Using JavaScript across the frontend and backend reduces the need to maintain separate programming language ecosystems for application development. It also allows development knowledge and some programming concepts to be applied across both projects.
 
-Together, these architectural decisions establish a repeatable container build and deployment process while keeping the application, persistent data, configuration and deployment responsibilities clearly separated.
+The technologies have distinct responsibilities:
+
+- **MongoDB:** Stores application data in a document-oriented database.
+- **Express.js:** Provides the backend HTTP server and REST API framework.
+- **React:** Provides the component-based frontend user interface.
+- **Node.js:** Provides the JavaScript runtime for the backend.
+
+The MERN stack was considered appropriate for the application's requirements because it supports independent frontend and backend development while providing a consistent technology ecosystem.
+
+### 4.2 Node.js and Express.js
+
+Node.js was selected as the backend runtime because it allows JavaScript to be used on both the frontend and backend. Its asynchronous, event-driven architecture is suitable for handling API requests and database operations (OpenJS Foundation, n.d.).
+
+Express.js was selected as the backend framework because it provides a lightweight approach to defining routes, handling HTTP requests and responses, and applying middleware.
+
+Its middleware architecture supports the integration of security controls, authentication, validation and error handling without requiring a more complex application framework (Express.js, n.d.).
+
+Together, Node.js and Express.js provide the backend foundation required to expose the application's REST API and process requests from the React frontend.
+
+### 4.3 React
+
+React was selected for the frontend because its component-based architecture supports reusable interface elements and separation of presentation into manageable components.
+
+This approach supports maintainability as the application grows and allows interface components to be developed and updated independently.
+
+React also provides an established ecosystem of development tools and libraries, supporting the frontend's routing, user interface and testing requirements (Meta Open Source, n.d.).
+
+The frontend is maintained and deployed separately from the backend, allowing each application to evolve independently while communicating through the REST API.
+
+### 4.4 MongoDB Atlas and Mongoose
+
+MongoDB Atlas was selected as the application's database platform because its document-oriented model is suitable for storing the application's structured resources, including users, moods, pains and events.
+
+MongoDB stores data as flexible documents, allowing related application information to be represented without requiring every resource to follow a rigid relational table structure (MongoDB, n.d.-a).
+
+Atlas provides a managed database service, removing the need to provision and maintain a separate database server for the project.
+
+Mongoose was selected as the object data modelling layer between the Node.js application and MongoDB. It provides schema definitions, validation and model-based interactions with the database, helping to maintain consistent data structures within the application (Mongoose, n.d.).
+
+The combination of MongoDB Atlas and Mongoose provides managed persistence while allowing the backend to define and validate its application data through JavaScript models.
+
+### 4.5 Authentication and Security Technologies
+
+JSON Web Tokens (JWT) were selected to support authenticated API requests. JWTs allow the backend to issue signed tokens that can be presented by clients when accessing protected endpoints.
+
+This approach supports authentication across the separately maintained frontend and backend without requiring the API to maintain a traditional server-side session for each authenticated user (IETF, 2015).
+
+Helmet was selected to apply security-related HTTP headers to the Express application. This provides an additional layer of protection through commonly recommended browser security headers (Helmet, n.d.).
+
+CORS middleware was included to control which origins are permitted to access the API through cross-origin browser requests. This is important because the frontend and backend are separately hosted applications (Express.js, n.d.).
+
+These technologies were selected because they integrate with the Express middleware architecture and support the application's authentication and security requirements without introducing an unnecessary additional framework.
+
+---
+
+## 5. DevOps and Infrastructure Technology Selection and Justification
+
+The technologies used for containerisation, CI/CD, hosting and deployment were selected based on their suitability for the project, integration capabilities, ease of use, security and ongoing operating costs.
+
+A key design consideration was to minimise additional costs while still implementing a modern and maintainable deployment architecture. Where possible, existing platforms and their available free features were preferred over introducing additional paid subscriptions or infrastructure.
+
+The term *free* in this section refers to the services and usage allowances available to this project at the time of implementation, based on its current configuration and usage. It does not imply that these services are permanently free or that costs cannot arise if usage increases, allowances change or providers update their pricing. The selected services and their associated costs will need to be reviewed as the application evolves.
+
+### 5.1 GitHub and GitHub Actions
+
+GitHub was selected as the central platform for source code management, version control, collaboration and CI/CD automation.
+
+GitHub provides an accessible environment for managing repositories, tracking changes, reviewing code and maintaining separate frontend and backend projects. Its support for open-source development, together with the features available under its free plan, made it a suitable choice for this project. GitHub Free currently provides unlimited public and private repositories and an included allowance for CI/CD usage (GitHub, n.d.-a).
+
+GitHub Actions was selected to automate code validation, testing, container image publishing and deployment. Maintaining workflow definitions alongside the application source code simplifies configuration and allows the CI/CD process to be version-controlled with the application.
+
+GitHub also provides repository and environment secrets for securely supplying configuration values and deployment credentials to workflow executions. Actions artefacts can be used to retain test results, coverage reports and other build outputs, providing traceability and supporting validation of the development process.
+
+Using GitHub Actions avoided introducing a separate CI/CD platform, such as Jenkins or CircleCI, reducing the number of services requiring configuration and administration.
+
+The decision to use GitHub's included features was based on the project's current requirements and usage, rather than an assumption that all GitHub functionality is unlimited or permanently free. GitHub applies usage allowances and billing limits to Actions compute and storage, particularly for private repositories (GitHub, n.d.-b; GitHub, n.d.-c).
+
+### 5.2 Docker and Docker Compose
+
+Docker was selected to package the backend application and its runtime dependencies into a portable container image.
+
+Containerisation provides a consistent application environment across development, testing and production. This reduces reliance on differences between individual development machines and the production hosting environment.
+
+The Dockerfile defines the application runtime, dependency installation, exposed port and non-root execution user. This provides a repeatable method for building the backend image and ensures that development dependencies are excluded from the production runtime image.
+
+Docker Compose was selected to simplify local container management. It defines the local development configuration, including port mapping and environment variables, without requiring developers to manually configure and run the container.
+
+Docker and Docker Compose were therefore selected to support consistent development and deployment while keeping the local environment straightforward to operate (Docker, n.d.-a; Docker, n.d.-b).
+
+### 5.3 GitHub Container Registry (GHCR)
+
+GitHub Container Registry (GHCR) was selected to store and distribute the Docker images produced by the CI/CD pipeline.
+
+GHCR integrates directly with GitHub Actions, allowing container images to be built and published using the existing repository permissions and workflow authentication. This avoids the need to maintain a separate registry account and additional credentials.
+
+Google Cloud Artifact Registry was considered as an alternative because of its integration with Cloud Run. However, its free storage allowance is limited to 0.5 GiB per billing account, with additional storage charged according to usage (Google Cloud, n.d.-a). This was considered restrictive for retaining multiple versioned container images.
+
+GHCR was therefore preferred because GitHub currently provides free container image storage and bandwidth through its Container Registry. GitHub's package billing arrangements and policies are subject to change, so this decision reflects the pricing available to the project at the time of implementation (GitHub, n.d.-c).
+
+Using GHCR also keeps source code, workflow definitions and container images within the same development ecosystem. Version tags and immutable image digests provide traceability between the source code, published image and deployed application.
+
+This decision reflects the project's current storage requirements and the available pricing arrangements. GHCR's pricing and usage policies will need to be reassessed if the application grows or the provider changes its terms.
+
+### 5.4 Netlify – Frontend Hosting
+
+Netlify was retained as the frontend hosting and deployment platform because of its ease of use and straightforward integration with GitHub.
+
+The platform supports automated deployments from a connected Git repository, allowing frontend changes to be built and published without requiring a separately maintained deployment server or custom infrastructure. Netlify also provides deployment previews and global content delivery through its CDN.
+
+Netlify's available free plan currently provides a $0 entry-level option with deployment previews and other hosting features, subject to monthly usage limits (Netlify, n.d.). This was suitable for the project's current frontend hosting requirements.
+
+Alternative hosting options, including Google Cloud Run and other cloud hosting services, were considered. However, moving the frontend to another platform would introduce additional configuration and deployment responsibilities without providing a significant benefit for the application's current requirements.
+
+Retaining Netlify therefore allowed the existing deployment process to continue while keeping the frontend and backend independently maintained and deployed.
+
+### 5.5 Google Cloud Run – Backend Hosting
+
+Google Cloud Run was selected to host the containerised backend API.
+
+Cloud Run provides a managed container execution environment, allowing the application to be deployed without provisioning or maintaining virtual machines or a container orchestration platform. It automatically scales instances in response to incoming requests and can scale to zero when minimum instances are not configured.
+
+Its usage-based billing model was an important consideration. Rather than requiring continuously provisioned compute resources, Cloud Run charges according to resource consumption, with an included monthly free usage allowance (Google Cloud, n.d.-b). This makes it suitable for an application with relatively low or variable traffic.
+
+AWS services, including AWS App Runner, were considered as alternatives. AWS App Runner also provides managed container hosting and usage-based pricing. However, its pricing model includes charges for provisioned container instances, even when they are idle, under its default configuration (Amazon Web Services, n.d.). Cloud Run was preferred because its scale-to-zero capability and pricing structure were considered more appropriate for the project's expected usage.
+
+Cloud Run was also selected because of its ease of deployment and integration with other Google Cloud services used by the application, including Secret Manager and Identity and Access Management (IAM). This provides a consistent environment for deployment, runtime configuration and access control.
+
+### 5.6 Google Cloud Secret Manager
+
+Google Cloud Secret Manager was selected to manage sensitive application configuration required by the production backend.
+
+GitHub Actions secrets are used to supply credentials during CI/CD workflow execution. However, production application secrets have different requirements because the backend needs access to sensitive configuration at runtime, independently of the deployment workflow.
+
+Secret Manager provides a dedicated service for storing and controlling access to these values. The Cloud Run service can access its required secrets, including the MongoDB connection string and JWT signing key, without embedding them in the source code or Docker image.
+
+This separation improves security and allows sensitive configuration to be managed independently of application releases. It also supports controlled access through Google Cloud IAM.
+
+Secret Manager was preferred over relying exclusively on GitHub repository secrets because GitHub Actions secrets are intended for workflow execution, whereas Google Cloud Secret Manager provides runtime secret management integrated with the production hosting environment.
+
+Google Cloud currently provides a free usage allowance for Secret Manager, including a limited number of active secret versions and access operations per month. Usage beyond these allowances may incur charges (Google Cloud, n.d.-c). Its selection was therefore based on its security capabilities, integration with Cloud Run and suitability within the project's current expected usage.
+
+### 5.7 Google Cloud Artifact Registry – Alternative Considered
+
+Google Cloud Artifact Registry was considered as the container image storage option because of its integration with Cloud Run and the wider Google Cloud ecosystem.
+
+However, its free storage allowance of 0.5 GiB per billing account was considered insufficient for the intended retention of multiple versioned container images without potentially incurring additional storage costs (Google Cloud, n.d.-a).
+
+GHCR provided a more suitable option because it integrates directly with the existing GitHub workflows and currently provides free container image storage and bandwidth.
+
+Consequently, the architecture uses GHCR to store container images and Google Cloud Run to execute them. This separates image storage from application hosting while allowing the deployment workflow to retrieve the required image using its immutable digest.
+
+### 5.8 Summary of Technology Decisions
+
+The final technology choices reflect a preference for integrated, accessible and cost-conscious services without compromising the architectural requirements of the application.
+
+| Requirement | Selected Technology | Alternative Considered | Justification |
+| --- | --- | --- | --- |
+| Source control | GitHub | GitLab, Bitbucket | Integrated repository management, usability and included features suitable for the project's current requirements. |
+| CI/CD automation | GitHub Actions | Jenkins, CircleCI | Integrated with GitHub repositories and provides the required automation without introducing another platform. |
+| Containerisation | Docker | Podman | Portable application packaging and a consistent runtime environment. |
+| Local container management | Docker Compose | Manual Docker commands | Simplifies local configuration and container management. |
+| Frontend hosting | Netlify | Google Cloud Run, Vercel | Ease of use, straightforward Git integration and deployment previews. |
+| Backend hosting | Google Cloud Run | AWS App Runner, AWS ECS | Managed container hosting, scale-to-zero capability, usage-based pricing and Google Cloud integration. |
+| Container registry | GitHub Container Registry | Google Artifact Registry | Direct GitHub integration and currently suitable container image storage and pricing for the project. |
+| Runtime secrets | Google Cloud Secret Manager | GitHub Actions secrets | Dedicated runtime secret management integrated with Cloud Run and IAM. |
+| Build and test artefacts | GitHub Actions Artifacts | External artefact storage | Keeps validation and deployment evidence alongside the CI/CD workflows, within the available usage allowance. |
+
+Overall, this approach avoids unnecessary duplication of services and reduces the number of platforms requiring separate configuration and administration. GitHub provides the central development and automation environment, while Netlify and Google Cloud provide hosting services suited to the distinct requirements of the frontend and backend.
+
+The architecture is not dependent on a single provider for every service. Instead, each technology was selected according to its purpose, integration capabilities and suitability for the project's current requirements. This provides a cost-conscious foundation while retaining the flexibility to adopt alternative services if application requirements, usage or pricing arrangements change.
+
+---
+
+## References
+
+Amazon Web Services. (n.d.). *AWS App Runner pricing*. [https://aws.amazon.com/apprunner/pricing/](https://aws.amazon.com/apprunner/pricing/)
+
+Docker. (n.d.-a). *Docker overview*. [https://docs.docker.com/get-started/docker-overview/](https://docs.docker.com/get-started/docker-overview/)
+
+Docker. (n.d.-b). *Docker Compose*. [https://docs.docker.com/compose/](https://docs.docker.com/compose/)
+
+Express.js. (n.d.). *Express documentation*. [https://expressjs.com/](https://expressjs.com/)
+
+GitHub. (n.d.-a). *Plans and pricing*. [https://github.com/pricing](https://github.com/pricing)
+
+GitHub. (n.d.-b). *Billing and usage*. GitHub Docs. [https://docs.github.com/en/actions/concepts/billing-and-usage](https://docs.github.com/en/actions/concepts/billing-and-usage)
+
+GitHub. (n.d.-c). *GitHub Packages billing*. GitHub Docs. [https://docs.github.com/en/billing/concepts/product-billing/](https://docs.github.com/en/billing/concepts/product-billing/github-packages)
+
+Google Cloud. (n.d.-a). *Artifact Registry pricing*. [https://cloud.google.com/artifact-registry/pricing](https://cloud.google.com/artifact-registry/pricing)
+
+Google Cloud. (n.d.-b). *Cloud Run pricing*. [https://cloud.google.com/run/pricing](https://cloud.google.com/run/pricing)
+
+Google Cloud. (n.d.-c). *Secret Manager pricing*. [https://cloud.google.com/secret-manager/pricing](https://cloud.google.com/secret-manager/pricing)
+
+Helmet. (n.d.). *Helmet documentation*. [https://helmetjs.github.io/](https://helmetjs.github.io/)
+
+IETF. (2015). *JSON Web Token (JWT)* (RFC 7519). [https://www.rfc-editor.org/rfc/rfc7519](https://www.rfc-editor.org/rfc/rfc7519)
+
+Meta Open Source. (n.d.). *React documentation*. [https://react.dev/](https://react.dev/)
+
+MongoDB. (n.d.-a). *Documents*. MongoDB Manual. [https://www.mongodb.com/docs/manual/core/document/](https://www.mongodb.com/docs/manual/core/document/)
+
+Mongoose. (n.d.). *Mongoose documentation*. [https://mongoosejs.com/docs/](https://mongoosejs.com/docs/)
+
+Netlify. (n.d.). *Pricing and plans*. [https://www.netlify.com/pricing/](https://www.netlify.com/pricing/)
+
+OpenJS Foundation. (n.d.). *Node.js documentation*. [https://nodejs.org/docs/](https://nodejs.org/docs/)
