@@ -103,13 +103,13 @@ Request validation and Mongoose schemas help ensure that application data is app
 
 The API also returns HTTP error responses to communicate request and application errors consistently. These include:
 
-| Status | Purpose |
-| --- | --- |
-| `400` | Bad Request |
-| `401` | Unauthorised |
-| `403` | Forbidden |
-| `404` | Not Found |
-| `500` | Internal Server Error |
+| Status | Purpose               |
+| ------ | --------------------- |
+| `400`  | Bad Request           |
+| `401`  | Unauthorised          |
+| `403`  | Forbidden             |
+| `404`  | Not Found             |
+| `500`  | Internal Server Error |
 
 ### 1.6 Data Layer
 
@@ -127,11 +127,11 @@ The backend uses automated testing and static code analysis to validate applicat
 
 The testing tools include:
 
-| Technology | Purpose |
-| --- | --- |
-| ESLint | Static code analysis and code-quality checks |
-| Jest | Automated testing framework |
-| Supertest | HTTP testing of Express endpoints |
+| Technology | Purpose                                      |
+| ---------- | -------------------------------------------- |
+| ESLint     | Static code analysis and code-quality checks |
+| Jest       | Automated testing framework                  |
+| Supertest  | HTTP testing of Express endpoints            |
 
 The current test suite contains five test files covering:
 
@@ -156,21 +156,21 @@ npm run test:coverage
 
 Jest collects coverage across four metrics:
 
-| Metric | Description |
-| --- | --- |
+| Metric     | Description                                |
+| ---------- | ------------------------------------------ |
 | Statements | Percentage of executable statements tested |
-| Branches | Percentage of conditional branches tested |
-| Functions | Percentage of functions tested |
-| Lines | Percentage of executable lines tested |
+| Branches   | Percentage of conditional branches tested  |
+| Functions  | Percentage of functions tested             |
+| Lines      | Percentage of executable lines tested      |
 
 The locally generated baseline on 15 November 2026 was:
 
 | Coverage Metric | Result |
-| --- | ---: |
-| Statements | 64.15% |
-| Branches | 43.28% |
-| Functions | 68.00% |
-| Lines | 64.65% |
+| --------------- | -----: |
+| Statements      | 64.15% |
+| Branches        | 43.28% |
+| Functions       | 68.00% |
+| Lines           | 64.65% |
 
 This baseline was generated from five passing test suites containing 19 passing tests. It provides a starting point for monitoring test coverage and identifying areas where additional tests may be beneficial.
 
@@ -178,13 +178,13 @@ Jest generates terminal, HTML and LCOV coverage reports. The HTML report can be 
 
 Application configuration is supplied through environment variables:
 
-| Variable | Purpose |
-| --- | --- |
-| `DATABASE_URL` | MongoDB Atlas connection string for application runtime |
-| `TEST_DATABASE_URL` | MongoDB connection string for automated testing |
-| `JWT_SECRET_KEY` | Secret used for JWT operations |
-| `PORT` | Port used by the Express server |
-| `NODE_ENV` | Identifies the application environment |
+| Variable            | Purpose                                                 |
+| ------------------- | ------------------------------------------------------- |
+| `DATABASE_URL`      | MongoDB Atlas connection string for application runtime |
+| `TEST_DATABASE_URL` | MongoDB connection string for automated testing         |
+| `JWT_SECRET_KEY`    | Secret used for JWT operations                          |
+| `PORT`              | Port used by the Express server                         |
+| `NODE_ENV`          | Identifies the application environment                  |
 
 For local development, configuration values are supplied through a `.env` file. Sensitive configuration files are excluded from source control.
 
@@ -281,7 +281,7 @@ The configuration builds the application from the project's Dockerfile and maps 
 
 ```yaml
 ports:
-  - "3000:3000"
+  - '3000:3000'
 ```
 
 It also supplies the local environment configuration:
@@ -458,12 +458,12 @@ The validation process produces the following outputs:
 
 The validation job receives its configuration through environment variables and GitHub repository secrets:
 
-| Variable | Purpose |
-| --- | --- |
+| Variable            | Purpose                                         |
+| ------------------- | ----------------------------------------------- |
 | `TEST_DATABASE_URL` | MongoDB connection string for automated testing |
-| `JWT_SECRET_KEY` | Secret used for JWT operations |
-| `PORT` | Application port for the test environment |
-| `NODE_ENV` | Identifies the test environment |
+| `JWT_SECRET_KEY`    | Secret used for JWT operations                  |
+| `PORT`              | Application port for the test environment       |
+| `NODE_ENV`          | Identifies the test environment                 |
 
 The test database connection is kept separate from the application's runtime database configuration. This prevents automated tests from relying on the production database connection.
 
@@ -547,12 +547,12 @@ Docker Buildx builds the container image using the repository's Dockerfile. GitH
 
 The workflow generates the following image tags:
 
-| Tag | Purpose |
-| --- | --- |
-| `latest` | Most recently published image |
-| `development` | Development image reference |
-| `testing` | Testing image reference |
-| `{version}` | Application version derived from `package.json` |
+| Tag               | Purpose                                           |
+| ----------------- | ------------------------------------------------- |
+| `latest`          | Most recently published image                     |
+| `development`     | Development image reference                       |
+| `testing`         | Testing image reference                           |
+| `{version}`       | Application version derived from `package.json`   |
 | `sha-{short-sha}` | Identifies the Git commit used to build the image |
 
 These tags identify the image produced by the main-branch build. They do not represent separate deployed development and testing environments.
@@ -583,10 +583,10 @@ Sensitive runtime configuration is managed separately from the container image.
 
 Google Cloud Secret Manager provides the following application secrets to the Cloud Run service:
 
-| Secret | Purpose |
-| --- | --- |
-| `DATABASE_URL` | MongoDB Atlas connection string |
-| `JWT_SECRET_KEY` | Secret used for JWT operations |
+| Secret           | Purpose                         |
+| ---------------- | ------------------------------- |
+| `DATABASE_URL`   | MongoDB Atlas connection string |
+| `JWT_SECRET_KEY` | Secret used for JWT operations  |
 
 The Cloud Run service runs the container on port `8080` and connects to MongoDB Atlas as an external managed database.
 
@@ -602,9 +602,9 @@ The health check retries up to 12 times, with a five-second interval between fai
 
 If the health check succeeds, the deployment is considered verified and the workflow promotes the same immutable image digest to the following production tags:
 
-| Tag | Purpose |
-| --- | --- |
-| `production` | Most recently verified production image |
+| Tag                    | Purpose                                                      |
+| ---------------------- | ------------------------------------------------------------ |
+| `production`           | Most recently verified production image                      |
 | `production-{version}` | Verified production image for a specific application version |
 
 For example, an application version of `1.0.0` results in the production tag `production-1.0.0`.
@@ -710,7 +710,7 @@ The technologies used for containerisation, CI/CD, hosting and deployment were s
 
 A key design consideration was to minimise additional costs while still implementing a modern and maintainable deployment architecture. Where possible, existing platforms and their available free features were preferred over introducing additional paid subscriptions or infrastructure.
 
-The term *free* in this section refers to the services and usage allowances available to this project at the time of implementation, based on its current configuration and usage. It does not imply that these services are permanently free or that costs cannot arise if usage increases, allowances change or providers update their pricing. The selected services and their associated costs will need to be reviewed as the application evolves.
+The term _free_ in this section refers to the services and usage allowances available to this project at the time of implementation, based on its current configuration and usage. It does not imply that these services are permanently free or that costs cannot arise if usage increases, allowances change or providers update their pricing. The selected services and their associated costs will need to be reviewed as the application evolves.
 
 ### 5.1 GitHub and GitHub Actions
 
@@ -804,17 +804,17 @@ Consequently, the architecture uses GHCR to store container images and Google Cl
 
 The final technology choices reflect a preference for integrated, accessible and cost-conscious services without compromising the architectural requirements of the application.
 
-| Requirement | Selected Technology | Alternative Considered | Justification |
-| --- | --- | --- | --- |
-| Source control | GitHub | GitLab, Bitbucket | Integrated repository management, usability and included features suitable for the project's current requirements. |
-| CI/CD automation | GitHub Actions | Jenkins, CircleCI | Integrated with GitHub repositories and provides the required automation without introducing another platform. |
-| Containerisation | Docker | Podman | Portable application packaging and a consistent runtime environment. |
-| Local container management | Docker Compose | Manual Docker commands | Simplifies local configuration and container management. |
-| Frontend hosting | Netlify | Google Cloud Run, Vercel | Ease of use, straightforward Git integration and deployment previews. |
-| Backend hosting | Google Cloud Run | AWS App Runner, AWS ECS | Managed container hosting, scale-to-zero capability, usage-based pricing and Google Cloud integration. |
-| Container registry | GitHub Container Registry | Google Artifact Registry | Direct GitHub integration and currently suitable container image storage and pricing for the project. |
-| Runtime secrets | Google Cloud Secret Manager | GitHub Actions secrets | Dedicated runtime secret management integrated with Cloud Run and IAM. |
-| Build and test artefacts | GitHub Actions Artifacts | External artefact storage | Keeps validation and deployment evidence alongside the CI/CD workflows, within the available usage allowance. |
+| Requirement                | Selected Technology         | Alternative Considered    | Justification                                                                                                      |
+| -------------------------- | --------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Source control             | GitHub                      | GitLab, Bitbucket         | Integrated repository management, usability and included features suitable for the project's current requirements. |
+| CI/CD automation           | GitHub Actions              | Jenkins, CircleCI         | Integrated with GitHub repositories and provides the required automation without introducing another platform.     |
+| Containerisation           | Docker                      | Podman                    | Portable application packaging and a consistent runtime environment.                                               |
+| Local container management | Docker Compose              | Manual Docker commands    | Simplifies local configuration and container management.                                                           |
+| Frontend hosting           | Netlify                     | Google Cloud Run, Vercel  | Ease of use, straightforward Git integration and deployment previews.                                              |
+| Backend hosting            | Google Cloud Run            | AWS App Runner, AWS ECS   | Managed container hosting, scale-to-zero capability, usage-based pricing and Google Cloud integration.             |
+| Container registry         | GitHub Container Registry   | Google Artifact Registry  | Direct GitHub integration and currently suitable container image storage and pricing for the project.              |
+| Runtime secrets            | Google Cloud Secret Manager | GitHub Actions secrets    | Dedicated runtime secret management integrated with Cloud Run and IAM.                                             |
+| Build and test artefacts   | GitHub Actions Artifacts    | External artefact storage | Keeps validation and deployment evidence alongside the CI/CD workflows, within the available usage allowance.      |
 
 Overall, this approach avoids unnecessary duplication of services and reduces the number of platforms requiring separate configuration and administration. GitHub provides the central development and automation environment, while Netlify and Google Cloud provide hosting services suited to the distinct requirements of the frontend and backend.
 
@@ -824,36 +824,36 @@ The architecture is not dependent on a single provider for every service. Instea
 
 ## References
 
-Amazon Web Services. (n.d.). *AWS App Runner pricing*. [https://aws.amazon.com/apprunner/pricing/](https://aws.amazon.com/apprunner/pricing/)
+Amazon Web Services. (n.d.). _AWS App Runner pricing_. [https://aws.amazon.com/apprunner/pricing/](https://aws.amazon.com/apprunner/pricing/)
 
-Docker. (n.d.-a). *Docker overview*. [https://docs.docker.com/get-started/docker-overview/](https://docs.docker.com/get-started/docker-overview/)
+Docker. (n.d.-a). _Docker overview_. [https://docs.docker.com/get-started/docker-overview/](https://docs.docker.com/get-started/docker-overview/)
 
-Docker. (n.d.-b). *Docker Compose*. [https://docs.docker.com/compose/](https://docs.docker.com/compose/)
+Docker. (n.d.-b). _Docker Compose_. [https://docs.docker.com/compose/](https://docs.docker.com/compose/)
 
-Express.js. (n.d.). *Express documentation*. [https://expressjs.com/](https://expressjs.com/)
+Express.js. (n.d.). _Express documentation_. [https://expressjs.com/](https://expressjs.com/)
 
-GitHub. (n.d.-a). *Plans and pricing*. [https://github.com/pricing](https://github.com/pricing)
+GitHub. (n.d.-a). _Plans and pricing_. [https://github.com/pricing](https://github.com/pricing)
 
-GitHub. (n.d.-b). *Billing and usage*. GitHub Docs. [https://docs.github.com/en/actions/concepts/billing-and-usage](https://docs.github.com/en/actions/concepts/billing-and-usage)
+GitHub. (n.d.-b). _Billing and usage_. GitHub Docs. [https://docs.github.com/en/actions/concepts/billing-and-usage](https://docs.github.com/en/actions/concepts/billing-and-usage)
 
-GitHub. (n.d.-c). *GitHub Packages billing*. GitHub Docs. [https://docs.github.com/en/billing/concepts/product-billing/](https://docs.github.com/en/billing/concepts/product-billing/github-packages)
+GitHub. (n.d.-c). _GitHub Packages billing_. GitHub Docs. [https://docs.github.com/en/billing/concepts/product-billing/](https://docs.github.com/en/billing/concepts/product-billing/github-packages)
 
-Google Cloud. (n.d.-a). *Artifact Registry pricing*. [https://cloud.google.com/artifact-registry/pricing](https://cloud.google.com/artifact-registry/pricing)
+Google Cloud. (n.d.-a). _Artifact Registry pricing_. [https://cloud.google.com/artifact-registry/pricing](https://cloud.google.com/artifact-registry/pricing)
 
-Google Cloud. (n.d.-b). *Cloud Run pricing*. [https://cloud.google.com/run/pricing](https://cloud.google.com/run/pricing)
+Google Cloud. (n.d.-b). _Cloud Run pricing_. [https://cloud.google.com/run/pricing](https://cloud.google.com/run/pricing)
 
-Google Cloud. (n.d.-c). *Secret Manager pricing*. [https://cloud.google.com/secret-manager/pricing](https://cloud.google.com/secret-manager/pricing)
+Google Cloud. (n.d.-c). _Secret Manager pricing_. [https://cloud.google.com/secret-manager/pricing](https://cloud.google.com/secret-manager/pricing)
 
-Helmet. (n.d.). *Helmet documentation*. [https://helmetjs.github.io/](https://helmetjs.github.io/)
+Helmet. (n.d.). _Helmet documentation_. [https://helmetjs.github.io/](https://helmetjs.github.io/)
 
-IETF. (2015). *JSON Web Token (JWT)* (RFC 7519). [https://www.rfc-editor.org/rfc/rfc7519](https://www.rfc-editor.org/rfc/rfc7519)
+IETF. (2015). _JSON Web Token (JWT)_ (RFC 7519). [https://www.rfc-editor.org/rfc/rfc7519](https://www.rfc-editor.org/rfc/rfc7519)
 
-Meta Open Source. (n.d.). *React documentation*. [https://react.dev/](https://react.dev/)
+Meta Open Source. (n.d.). _React documentation_. [https://react.dev/](https://react.dev/)
 
-MongoDB. (n.d.-a). *Documents*. MongoDB Manual. [https://www.mongodb.com/docs/manual/core/document/](https://www.mongodb.com/docs/manual/core/document/)
+MongoDB. (n.d.-a). _Documents_. MongoDB Manual. [https://www.mongodb.com/docs/manual/core/document/](https://www.mongodb.com/docs/manual/core/document/)
 
-Mongoose. (n.d.). *Mongoose documentation*. [https://mongoosejs.com/docs/](https://mongoosejs.com/docs/)
+Mongoose. (n.d.). _Mongoose documentation_. [https://mongoosejs.com/docs/](https://mongoosejs.com/docs/)
 
-Netlify. (n.d.). *Pricing and plans*. [https://www.netlify.com/pricing/](https://www.netlify.com/pricing/)
+Netlify. (n.d.). _Pricing and plans_. [https://www.netlify.com/pricing/](https://www.netlify.com/pricing/)
 
-OpenJS Foundation. (n.d.). *Node.js documentation*. [https://nodejs.org/docs/](https://nodejs.org/docs/)
+OpenJS Foundation. (n.d.). _Node.js documentation_. [https://nodejs.org/docs/](https://nodejs.org/docs/)
