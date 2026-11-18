@@ -81,7 +81,14 @@ jobs:
           GCP_REGION: ${{ vars.GCP_REGION }}
           GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
         run: |
-          set -o pipefail
+          set -euo pipefail
+
+          if [[ -z "$SERVICE_NAME" ]]; then
+            echo "ERROR: Cloud Run service name is empty."
+            exit 1
+          fi
+
+          echo "Deploying Cloud Run service: $SERVICE_NAME"
 
           gcloud run deploy "$SERVICE_NAME" \
             --project="$GCP_PROJECT_ID" \
