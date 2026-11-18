@@ -103,11 +103,11 @@ The backend uses Jest and Supertest to validate API behaviour. The CI workflow r
 The locally generated baseline on 15 November 2026 was:
 
 | Coverage Metric | Result |
-| --- | ---: |
-| Statements | 64.15% |
-| Branches | 43.28% |
-| Functions | 68.00% |
-| Lines | 64.65% |
+| --------------- | -----: |
+| Statements      | 64.15% |
+| Branches        | 43.28% |
+| Functions       | 68.00% |
+| Lines           | 64.65% |
 
 Coverage reports are generated using `npm run test:coverage` and are available locally or through the GitHub Actions validation artefacts.
 
@@ -363,7 +363,7 @@ Note: GitHub Actions artefacts are uploaded after the relevant jobs complete, in
 
 The Cloud Run deployment demonstrates that the container image was deployed to the production service and passed the deployment health verification.
 
-![Successful Google Cloud Run deployment](docs/images/cloud-run-deployment.png)
+![Successful Google Cloud Run deployment](docs/images/deployment-health.png)
 
 ## Project Features
 
@@ -404,27 +404,27 @@ The Cloud Run deployment demonstrates that the container image was deployed to t
 
 ### Chosen Technologies
 
-| Technology | Purpose |
-| --- | --- |
-| MongoDB Atlas | Stores the application's data |
-| Express.js 5.2.1 | Handles API routing and middleware |
-| Node.js 26 | Runs the backend server environment |
-| Mongoose 9.3.0 | MongoDB object modelling and database communication |
-| JWT | Handles authentication |
-| Helmet | Provides HTTP security headers |
-| CORS | Manages cross-origin browser access control |
-| Jest | Runs automated tests |
-| Supertest | Performs HTTP/API testing |
-| Docker | Provides application containerisation |
-| Docker Buildx | Builds and publishes container images |
-| GitHub Actions | Automates validation, publishing and deployment |
-| GitHub Container Registry | Stores versioned Docker images |
-| Google Cloud Run | Hosts the containerised backend API |
-| Google Cloud IAM | Manages deployment and runtime permissions |
-| Workload Identity Federation | Provides secure GitHub-to-Google authentication |
-| Google Cloud Secret Manager | Stores sensitive runtime configuration |
-| GitHub Actions Artifacts | Retains build, test and deployment evidence |
-| HTTP Health Checks | Verifies successful application deployment |
+| Technology                   | Purpose                                             |
+| ---------------------------- | --------------------------------------------------- |
+| MongoDB Atlas                | Stores the application's data                       |
+| Express.js 5.2.1             | Handles API routing and middleware                  |
+| Node.js 26                   | Runs the backend server environment                 |
+| Mongoose 9.3.0               | MongoDB object modelling and database communication |
+| JWT                          | Handles authentication                              |
+| Helmet                       | Provides HTTP security headers                      |
+| CORS                         | Manages cross-origin browser access control         |
+| Jest                         | Runs automated tests                                |
+| Supertest                    | Performs HTTP/API testing                           |
+| Docker                       | Provides application containerisation               |
+| Docker Buildx                | Builds and publishes container images               |
+| GitHub Actions               | Automates validation, publishing and deployment     |
+| GitHub Container Registry    | Stores versioned Docker images                      |
+| Google Cloud Run             | Hosts the containerised backend API                 |
+| Google Cloud IAM             | Manages deployment and runtime permissions          |
+| Workload Identity Federation | Provides secure GitHub-to-Google authentication     |
+| Google Cloud Secret Manager  | Stores sensitive runtime configuration              |
+| GitHub Actions Artifacts     | Retains build, test and deployment evidence         |
+| HTTP Health Checks           | Verifies successful application deployment          |
 
 ### Industry Relevance
 
@@ -446,21 +446,21 @@ See Stack Overflow graphs - [Here](#references):
 
 ### Comparison to Alternative Technologies
 
-| Chosen Technology | Alternative | Reason Chosen |
-| --- | --- | --- |
-| MongoDB | PostgreSQL | Flexible document-based data model |
-| Express.js | Django | Minimalist, customisable, JavaScript-based |
-| React | Angular | Component flexibility, rapid development |
-| Node.js | ASP.NET | JavaScript development across the stack |
+| Chosen Technology | Alternative | Reason Chosen                              |
+| ----------------- | ----------- | ------------------------------------------ |
+| MongoDB           | PostgreSQL  | Flexible document-based data model         |
+| Express.js        | Django      | Minimalist, customisable, JavaScript-based |
+| React             | Angular     | Component flexibility, rapid development   |
+| Node.js           | ASP.NET     | JavaScript development across the stack    |
 
 ### Licensing Information
 
-| Technology | License |
-| --- | --- |
-| MongoDB | Server Side Public License (SSPL) |
-| Express.js | MIT License |
-| React | MIT License |
-| Node.js | MIT License |
+| Technology | License                           |
+| ---------- | --------------------------------- |
+| MongoDB    | Server Side Public License (SSPL) |
+| Express.js | MIT License                       |
+| React      | MIT License                       |
+| Node.js    | MIT License                       |
 
 **Note: Although MongoDB uses an SSPL licence, it is still appropriate to licence this project under MIT because the application:**
 
@@ -474,13 +474,13 @@ The application uses the following production dependencies:
 
 ```json
 {
-  "cors": "^2.8.6",
-  "dotenv": "^17.4.2",
-  "express": "^5.2.1",
-  "helmet": "^8.1.0",
-  "jsonwebtoken": "^9.0.3",
-  "mongoose": "^9.3.0",
-  "smallog": "^1.0.2"
+  "cors": "^2.8.6",
+  "dotenv": "^17.4.2",
+  "express": "^5.2.1",
+  "helmet": "^8.1.0",
+  "jsonwebtoken": "^9.0.3",
+  "mongoose": "^9.3.0",
+  "smallog": "^1.0.2"
 }
 ```
 
@@ -488,11 +488,11 @@ Development dependencies include:
 
 ```json
 {
-  "cross-env": "^10.1.0",
-  "eslint": "^9.39.4",
-  "globals": "^17.6.0",
-  "jest": "^30.3.0",
-  "supertest": "^7.2.2"
+  "cross-env": "^10.1.0",
+  "eslint": "^9.39.4",
+  "globals": "^17.6.0",
+  "jest": "^30.3.0",
+  "supertest": "^7.2.2"
 }
 ```
 
@@ -572,15 +572,15 @@ MongoDB Atlas is kept external to the Docker container. This allows containers t
 
 ```json
 {
-  "_userId": "ObjectId",
-  "username": "davejohnson",
-  "password": "hashed_password",
-  "email": "davo@example.com",
-  "isAdmin": true,
-  "theme": "light",
-  "salt": "a8f3c91d2ef4...",
-  "createdAt": "2026-05-24T07:15:22.123Z",
-  "updatedAt": "2026-05-24T09:41:10.456Z"
+  "_userId": "ObjectId",
+  "username": "davejohnson",
+  "password": "hashed_password",
+  "email": "davo@example.com",
+  "isAdmin": true,
+  "theme": "light",
+  "salt": "a8f3c91d2ef4...",
+  "createdAt": "2026-05-24T07:15:22.123Z",
+  "updatedAt": "2026-05-24T09:41:10.456Z"
 }
 ```
 
@@ -588,14 +588,14 @@ MongoDB Atlas is kept external to the Docker container. This allows containers t
 
 ```json
 {
-  "_painId": "ObjectId",
-  "user": "davejohnson",
-  "value": 3,
-  "location": "neck",
-  "optional_text": "string",
-  "occurred_at": "2026-05-24T07:15:22.123Z",
-  "createdAt": "2026-05-24T07:15:22.123Z",
-  "updatedAt": "2026-05-24T09:41:10.456Z"
+  "_painId": "ObjectId",
+  "user": "davejohnson",
+  "value": 3,
+  "location": "neck",
+  "optional_text": "string",
+  "occurred_at": "2026-05-24T07:15:22.123Z",
+  "createdAt": "2026-05-24T07:15:22.123Z",
+  "updatedAt": "2026-05-24T09:41:10.456Z"
 }
 ```
 
@@ -603,14 +603,14 @@ MongoDB Atlas is kept external to the Docker container. This allows containers t
 
 ```json
 {
-  "_eventId": "ObjectId",
-  "user": "davejohnson",
-  "title": "breakup",
-  "description": "Broke up with my girlfriend Alysha",
-  "category": "life_event",
-  "occurred_at": "2026-05-24T07:15:22.123Z",
-  "createdAt": "2026-05-24T07:15:22.123Z",
-  "updatedAt": "2026-05-24T09:41:10.456Z"
+  "_eventId": "ObjectId",
+  "user": "davejohnson",
+  "title": "breakup",
+  "description": "Broke up with my girlfriend Alysha",
+  "category": "life_event",
+  "occurred_at": "2026-05-24T07:15:22.123Z",
+  "createdAt": "2026-05-24T07:15:22.123Z",
+  "updatedAt": "2026-05-24T09:41:10.456Z"
 }
 ```
 
@@ -618,13 +618,13 @@ MongoDB Atlas is kept external to the Docker container. This allows containers t
 
 ```json
 {
-  "_moodId": "ObjectId",
-  "user": "davejohnson",
-  "value": 5,
-  "optional_text": "Nothing much happened today, boring day at work",
-  "occurred_at": "2026-05-24T07:15:22.123Z",
-  "createdAt": "2026-05-24T07:15:22.123Z",
-  "updatedAt": "2026-05-24T09:41:10.456Z"
+  "_moodId": "ObjectId",
+  "user": "davejohnson",
+  "value": 5,
+  "optional_text": "Nothing much happened today, boring day at work",
+  "occurred_at": "2026-05-24T07:15:22.123Z",
+  "createdAt": "2026-05-24T07:15:22.123Z",
+  "updatedAt": "2026-05-24T09:41:10.456Z"
 }
 ```
 
@@ -858,21 +858,21 @@ Docker images are published to GitHub Container Registry (GHCR).
 
 The build workflow publishes the image using the following tags:
 
-| Tag | Purpose |
-| --- | --- |
-| `latest` | Most recently published image |
-| `development` | Development image reference |
-| `testing` | Testing image reference |
-| `{version}` | Application version derived from `package.json` |
+| Tag               | Purpose                                           |
+| ----------------- | ------------------------------------------------- |
+| `latest`          | Most recently published image                     |
+| `development`     | Development image reference                       |
+| `testing`         | Testing image reference                           |
+| `{version}`       | Application version derived from `package.json`   |
 | `sha-{short-sha}` | Identifies the Git commit used to build the image |
 
 These tags identify the image produced by the main-branch build. They do not represent separate deployed development or testing environments.
 
 Following a successful production deployment and health verification, the deployment workflow promotes the same image digest using these additional tags:
 
-| Tag | Purpose |
-| --- | --- |
-| `production` | Most recently verified production image |
+| Tag                    | Purpose                                                      |
+| ---------------------- | ------------------------------------------------------------ |
+| `production`           | Most recently verified production image                      |
 | `production-{version}` | Verified production image for a specific application version |
 
 The version is obtained directly from `package.json`. For example, if the application version is `1.0.0`, the production tag becomes `production-1.0.0`.
@@ -896,11 +896,11 @@ The main workflow coordinates application validation, container image publishing
 
 The main workflow is triggered by:
 
-| Event | Behaviour |
-| --- | --- |
-| Pull request to `main` | Runs application validation |
-| Push to `main` | Runs validation, builds and publishes the Docker image, then initiates production deployment |
-| Manual workflow dispatch | Allows the workflow to be initiated manually |
+| Event                    | Behaviour                                                                                    |
+| ------------------------ | -------------------------------------------------------------------------------------------- |
+| Pull request to `main`   | Runs application validation                                                                  |
+| Push to `main`           | Runs validation, builds and publishes the Docker image, then initiates production deployment |
+| Manual workflow dispatch | Allows the workflow to be initiated manually                                                 |
 
 The `validate` job runs for all three triggers. Container publishing and production deployment are restricted to eligible runs targeting `main`. Pull requests therefore validate changes without publishing or deploying a container image. Manual workflow dispatch also requires the run to target `main` before the build and deployment stages can proceed.
 
@@ -940,23 +940,23 @@ The `npm run test:coverage` command generates:
 
 Coverage is collected across four metrics:
 
-| Metric | Description |
-| --- | --- |
+| Metric     | Description                                |
+| ---------- | ------------------------------------------ |
 | Statements | Percentage of executable statements tested |
-| Branches | Percentage of conditional branches tested |
-| Functions | Percentage of functions tested |
-| Lines | Percentage of executable lines tested |
+| Branches   | Percentage of conditional branches tested  |
+| Functions  | Percentage of functions tested             |
+| Lines      | Percentage of executable lines tested      |
 
 The GitHub Actions workflow separately generates a structured Jest JSON test-results report using additional Jest command-line arguments. The coverage reports and structured test execution results are distinct outputs.
 
 The validation process produces the following artefacts:
 
-| Artefact | Purpose |
-| --- | --- |
-| Validation logs | Retain dependency installation, ESLint and Jest output |
-| Jest JSON results | Provide structured test execution information |
+| Artefact             | Purpose                                                    |
+| -------------------- | ---------------------------------------------------------- |
+| Validation logs      | Retain dependency installation, ESLint and Jest output     |
+| Jest JSON results    | Provide structured test execution information              |
 | HTML coverage report | Allow individual files and uncovered lines to be inspected |
-| LCOV report | Provide coverage data in a compatible format |
+| LCOV report          | Provide coverage data in a compatible format               |
 
 Validation logs, structured test results and available coverage reports are uploaded as GitHub Actions artefacts and retained for 30 days.
 
@@ -1036,13 +1036,13 @@ If health verification does not succeed, the production tags are not promoted. T
 
 The workflows retain diagnostic and deployment information to support troubleshooting and verification.
 
-| Artefact | Information retained |
-| --- | --- |
-| Validation logs | Dependency installation, ESLint and Jest output |
-| Test results | Structured Jest JSON test results |
-| Coverage reports | Available HTML and LCOV coverage reports |
-| Build metadata | Application version, commit SHA and image digest |
-| Deployment logs | Cloud Run deployment and image promotion output |
+| Artefact            | Information retained                                      |
+| ------------------- | --------------------------------------------------------- |
+| Validation logs     | Dependency installation, ESLint and Jest output           |
+| Test results        | Structured Jest JSON test results                         |
+| Coverage reports    | Available HTML and LCOV coverage reports                  |
+| Build metadata      | Application version, commit SHA and image digest          |
+| Deployment logs     | Cloud Run deployment and image promotion output           |
 | Production metadata | Cloud Run revision, service URL and deployed image digest |
 
 Workflow artefacts are retained for 30 days.
@@ -1079,17 +1079,17 @@ The build workflow publishes the initial image tags, while the deployment workfl
 
 The following npm scripts are available:
 
-| Script | Description |
-| --- | --- |
-| `npm start` | Starts the production application |
-| `npm run dev` | Starts the development server with automatic reloads |
-| `npm run lint` | Runs ESLint code-quality checks |
-| `npm test` | Runs the Jest automated test suite |
-| `npm run test:coverage` | Runs Jest and generates test coverage reports |
-| `npm run setup:env` | Creates the local environment file |
-| `npm run db:seed` | Seeds the database |
-| `npm run db:wipe` | Removes database records |
-| `npm run db:reset` | Wipes and reseeds the database |
+| Script                  | Description                                          |
+| ----------------------- | ---------------------------------------------------- |
+| `npm start`             | Starts the production application                    |
+| `npm run dev`           | Starts the development server with automatic reloads |
+| `npm run lint`          | Runs ESLint code-quality checks                      |
+| `npm test`              | Runs the Jest automated test suite                   |
+| `npm run test:coverage` | Runs Jest and generates test coverage reports        |
+| `npm run setup:env`     | Creates the local environment file                   |
+| `npm run db:seed`       | Seeds the database                                   |
+| `npm run db:wipe`       | Removes database records                             |
+| `npm run db:reset`      | Wipes and reseeds the database                       |
 
 ### Automated CI Testing
 
@@ -1205,23 +1205,23 @@ Jest collects coverage from JavaScript files within `src/`, excluding developmen
 
 Coverage is collected across four metrics:
 
-| Metric | Description |
-| --- | --- |
+| Metric     | Description                                |
+| ---------- | ------------------------------------------ |
 | Statements | Percentage of executable statements tested |
-| Branches | Percentage of conditional branches tested |
-| Functions | Percentage of functions tested |
-| Lines | Percentage of executable lines tested |
+| Branches   | Percentage of conditional branches tested  |
+| Functions  | Percentage of functions tested             |
+| Lines      | Percentage of executable lines tested      |
 
 ### Local Coverage Baseline
 
 The following results were generated locally on 15 November 2026:
 
-| Metric | Coverage |
-| --- | ---: |
-| Statements | 64.15% |
-| Branches | 43.28% |
-| Functions | 68.00% |
-| Lines | 64.65% |
+| Metric     | Coverage |
+| ---------- | -------: |
+| Statements |   64.15% |
+| Branches   |   43.28% |
+| Functions  |   68.00% |
+| Lines      |   64.65% |
 
 The baseline was generated using five passing test suites containing 19 passing tests.
 
@@ -1346,11 +1346,11 @@ This project uses third-party technologies including MongoDB, which is licensed 
 
 ## References
 
-> [MongoDB. (2026). MERN Stack Explained_. Retrieved May 24, 2026, from https://www.mongodb.com/resources/languages/mern-stack](#tech-stack)
+> [MongoDB. (2026). MERN Stack Explained\_. Retrieved May 24, 2026, from https://www.mongodb.com/resources/languages/mern-stack](#tech-stack)
 
-> [State of JavaScript. (2025). State of JavaScript 2025: Libraries_. Retrieved May 24, 2026, from https://2025.stateofjs.com/en-US/libraries/](#tech-stack)
+> [State of JavaScript. (2025). State of JavaScript 2025: Libraries\_. Retrieved May 24, 2026, from https://2025.stateofjs.com/en-US/libraries/](#tech-stack)
 
-> [Stack Overflow. (2025). 2025 Developer Survey_. Retrieved May 24, 2026, from https://survey.stackoverflow.co/2025/](#tech-stack)
+> [Stack Overflow. (2025). 2025 Developer Survey\_. Retrieved May 24, 2026, from https://survey.stackoverflow.co/2025/](#tech-stack)
 
 ## Authors
 
