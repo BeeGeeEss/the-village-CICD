@@ -1,4 +1,3 @@
-
 name: Build, Test, Publish and Deploy
 
 on:
@@ -19,7 +18,6 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-
   # 1. VALIDATE APPLICATION
 
   validate:
@@ -195,6 +193,6 @@ jobs:
       image_digest: ${{ needs.build_container.outputs.digest }}
       app_version: ${{ needs.build_container.outputs.app_version }}
       short_sha: ${{ needs.build_container.outputs.short_sha }}
-      service_name: the-village-api-production
+      service_name: ${{ vars.GCP_SERVICE }}
 
     secrets: inherit
